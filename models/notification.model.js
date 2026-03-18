@@ -1,4 +1,5 @@
 import mongoose, { model, Schema, Types } from "mongoose";
+import { NOTIFICATION_TYPE_VALUES } from "../constants/notifications.constants.js";
 
 const { ObjectId } = Types;
 
@@ -12,16 +13,7 @@ const notificationSchema = new Schema(
 
     type: {
       type: String,
-      enum: [
-        "mention",
-        "thread_reply",
-        "reaction",
-        "dm",
-        "group_message",
-        "added_to_team",
-        "added_to_channel",
-        "added_to_group",
-      ],
+      enum: NOTIFICATION_TYPE_VALUES,
       required: true,
     },
 

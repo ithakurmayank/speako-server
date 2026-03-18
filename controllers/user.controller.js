@@ -5,26 +5,7 @@ import { TryCatch } from "../middlewares/error.middleware.js";
 import { ErrorHandler } from "../utils/utility.js";
 import { REFETCH_CHATS } from "../constants/events.js";
 import { getOtherMember } from "../lib/helper.js";
-
-// Create user and save token in cookie
-const registerUser = TryCatch(async (req, res, next) => {
-  const { name, bio = "", username, password } = req.body;
-
-  const icon = {
-    public_id: "sdfdsff",
-    url: "sdfdsf",
-  };
-
-  const user = await User.create({
-    name,
-    bio,
-    username,
-    passwordHash: password,
-    icon,
-  });
-
-  sendToken(res, user, 201, "User created");
-});
+import env from "../configs/env.js";
 
 // Login user and save token in cookie
 // const login = TryCatch(async (req, res, next) => {
@@ -52,12 +33,10 @@ const registerUser = TryCatch(async (req, res, next) => {
 // });
 
 // const logout = (req, res, next) => {
-//   return res
-//     .cookie(process.env.TOKEN_KEY, "", { ...cookieOptions, maxAge: 0 })
-//     .json({
-//       success: true,
-//       message: "Logged out successfully",
-//     });
+//   return res.cookie(env.TOKEN_KEY, "", { ...cookieOptions, maxAge: 0 }).json({
+//     success: true,
+//     message: "Logged out successfully",
+//   });
 // };
 
 // const searchUser = TryCatch(async (req, res, next) => {
@@ -207,14 +186,12 @@ const registerUser = TryCatch(async (req, res, next) => {
 //   }
 // });
 
-export {
-  // login,
-  registerUser,
-  // getMyProfile,
-  // logout,
-  // searchUser,
-  // sendChatRequest,
-  // acceptChatRequest,
-  // getMyNotifications,
-  // getMyFriends,
-};
+export // login,
+// getMyProfile,
+// logout,
+// searchUser,
+// sendChatRequest,
+// acceptChatRequest,
+// getMyNotifications,
+// getMyFriends,
+ {};

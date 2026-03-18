@@ -1,4 +1,8 @@
 import mongoose, { model, Schema, Types } from "mongoose";
+import {
+  DM_MESSAGE_STATUS_VALUES,
+  GROUP_MESSAGE_STATUS_VALUES,
+} from "../constants/message.constants";
 
 const { ObjectId } = Types;
 
@@ -13,7 +17,7 @@ const reactionSchema = new Schema(
 const receiptSchema = new Schema(
   {
     userId: { type: ObjectId, ref: "User", required: true },
-    status: { type: String, enum: ["delivered", "seen"], required: true },
+    status: { type: String, enum: GROUP_MESSAGE_STATUS_VALUES, required: true },
     timestamp: { type: Date, default: Date.now },
   },
   { _id: false },
@@ -43,7 +47,7 @@ const messageSchema = new Schema(
     // 1-on-1 DM delivery state:
     dmStatus: {
       type: String,
-      enum: ["sending", "sent", "delivered", "seen"],
+      enum: DM_MESSAGE_STATUS_VALUES,
       default: null,
     },
     dmDeliveredAt: { type: Date, default: null },

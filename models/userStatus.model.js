@@ -1,4 +1,8 @@
 import mongoose, { model, Schema, Types } from "mongoose";
+import {
+  USER_CUSTOM_STATUS_VALUES,
+  USER_STATUS,
+} from "../constants/user.constants.js";
 
 const { ObjectId } = Types;
 
@@ -9,22 +13,14 @@ const userStatusSchema = new Schema(
     // System-managed via socket events
     status: {
       type: String,
-      enum: ["online", "offline", "away"],
-      default: "offline",
+      enum: USER_STATUS_VALUES,
+      default: USER_STATUS.OFFLINE,
     },
 
     // User-managed manually (like Teams "Do not disturb")
     customStatus: {
       type: String,
-      enum: [
-        "active",
-        "busy",
-        "do_not_disturb",
-        "be_right_back",
-        "appear_away",
-        "appear_offline",
-        null,
-      ],
+      enum: USER_CUSTOM_STATUS_VALUES,
       default: null,
     },
     lastSeenAt: { type: Date, default: null },

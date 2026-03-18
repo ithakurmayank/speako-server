@@ -1,0 +1,8 @@
+const CONVERSATION_TYPES = Object.freeze({
+  DIRECT: "direct",
+  GROUP: "group",
+});
+
+const CONVERSATION_TYPES_VALUES = Object.values(CONVERSATION_TYPES);
+
+export { CONVERSATION_TYPES, CONVERSATION_TYPES_VALUES };

@@ -1,4 +1,6 @@
 import mongoose, { model, Schema, Types } from "mongoose";
+import { MEMBER_SCOPES_VALUES } from "../constants/user.constants.js";
+import { OTHER_ROLES_VALUES } from "../constants/roles.constants.js";
 
 const { ObjectId } = Types;
 
@@ -13,24 +15,13 @@ const membershipSchema = new Schema(
 
     scope: {
       type: String,
-      enum: ["org", "team", "channel"],
+      enum: MEMBER_SCOPES_VALUES,
       required: true,
     },
 
     role: {
       type: String,
-      enum: [
-        "OrgOwner",
-        "OrgAdmin",
-        "OrgMember",
-        "OrgGuest",
-        "TeamAdmin",
-        "TeamMember",
-        "TeamGuest",
-        "ChannelModerator",
-        "ChannelMember",
-        "ChannelReadOnly",
-      ],
+      enum: OTHER_ROLES_VALUES,
       required: true,
     },
 

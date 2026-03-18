@@ -1,4 +1,8 @@
 import mongoose, { model, Schema, Types } from "mongoose";
+import {
+  CHANNEL_TYPES,
+  CHANNEL_TYPES_VALUES,
+} from "../constants/channel.constants.js";
 
 const { ObjectId } = Types;
 
@@ -12,8 +16,8 @@ const channelSchema = new Schema(
 
     type: {
       type: String,
-      enum: ["text", "announcement"], // announcement = only mods can post
-      default: "text",
+      enum: CHANNEL_TYPES_VALUES, // announcement = only mods can post
+      default: CHANNEL_TYPES.TEXT,
     },
 
     isPrivate: { type: Boolean, default: false },

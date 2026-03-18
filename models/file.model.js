@@ -1,4 +1,8 @@
 import mongoose, { model, Schema, Types } from "mongoose";
+import {
+  CLOUDINARY_RESOURCE_TYPES_VALUES,
+  FILE_TYPES_VALUES,
+} from "../constants/fileTypes.constants.js";
 
 const { ObjectId } = Types;
 
@@ -16,7 +20,7 @@ const fileSchema = new Schema(
     publicId: { type: String, required: true }, // for deletion
     cloudinaryResourceType: {
       type: String,
-      enum: ["image", "video", "raw"],
+      enum: CLOUDINARY_RESOURCE_TYPES_VALUES,
       required: true,
     },
 
@@ -24,15 +28,7 @@ const fileSchema = new Schema(
     // filtering ("show only images"), and preview rendering decisions.
     fileType: {
       type: String,
-      enum: [
-        "image", // png, jpg, gif, webp, svg
-        "video", // mp4, mov, webm
-        "audio", // mp3, wav, ogg, m4a
-        "document", // pdf, doc, docx, ppt, pptx, xls, xlsx
-        "code", // js, ts, py, json, html, css etc.
-        "archive", // zip, rar, tar, gz
-        "other",
-      ],
+      enum: FILE_TYPES_VALUES,
       required: true,
     },
 

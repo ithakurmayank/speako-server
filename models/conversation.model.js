@@ -1,4 +1,12 @@
 import mongoose, { model, Schema, Types } from "mongoose";
+import {
+  CONVERSATION_TYPES,
+  CONVERSATION_TYPES_VALUES,
+} from "../constants/conversation.constants.js";
+import {
+  GROUP_ROLES,
+  GROUP_ROLES_VALUES,
+} from "../constants/roles.constants.js";
 
 const { ObjectId } = Types;
 
@@ -7,20 +15,20 @@ const participantSchema = new Schema(
     userId: { type: ObjectId, ref: "User", required: true },
     role: {
       type: String,
-      enum: ["GroupAdmin", "GroupMember"],
-      default: "GroupMember",
+      enum: GROUP_ROLES_VALUES,
+      default: GROUP_ROLES.GroupMember,
     },
     joinedAt: { type: Date, default: Date.now },
     addedBy: { type: ObjectId, ref: "User", default: null },
-    hasLeft: Boolean,
-    leftAt: Date,
+    hasLeft: { type: Boolean, default: false },
+    leftAt: { type: Date, default: null },
   },
   { _id: false },
 );
 
 const conversationSchema = new Schema(
   {
-    type: { type: String, enum: ["direct", "group"], required: true },
+    type: { type: String, enum: CONVERSATION_TYPES_VALUES, required: true },
 
     orgId: { type: ObjectId, ref: "Organization", required: true },
 
@@ -41,8 +49,8 @@ const conversationSchema = new Schema(
       required: true,
       validate: {
         validator(arr) {
-          if (this.type === "direct") return arr.length === 2;
-          if (this.type === "group")
+          if (this.type === CONVERSATION_TYPES.DIRECT) return arr.length === 2;
+          if (this.type === CONVERSATION_TYPES.GROUP)
             return arr.length >= 2 && arr.length <= 200;
           return false;
         },

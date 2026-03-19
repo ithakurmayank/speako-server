@@ -11,4 +11,12 @@ class ErrorHandler extends Error {
   }
 }
 
-export { ErrorHandler };
+const TryCatch = (functionToWrap) => async (req, res, next) => {
+  try {
+    await functionToWrap(req, res, next);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { ErrorHandler, TryCatch };

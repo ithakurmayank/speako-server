@@ -1,12 +1,3 @@
-import { compare } from "bcrypt";
-import { User } from "../models/userModel.js";
-import { cookieOptions, emitEvent, sendToken } from "../utils/features.js";
-import { TryCatch } from "../middlewares/error.middleware.js";
-import { ErrorHandler } from "../utils/utility.js";
-import { REFETCH_CHATS } from "../constants/events.js";
-import { getOtherMember } from "../lib/helper.js";
-import env from "../configs/env.js";
-
 // Login user and save token in cookie
 // const login = TryCatch(async (req, res, next) => {
 //   const { username, password } = req.body;

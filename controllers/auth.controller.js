@@ -1,10 +1,8 @@
 import bcrypt from "bcrypt";
 import dayjs from "dayjs";
 import { REFRESH_TOKEN_EXPIRY_SECONDS } from "../constants/token.constants.js";
-import { TryCatch } from "../middlewares/error.middleware.js";
 import { RefreshToken } from "../models/refreshToken.model.js";
-import { User } from "../models/user.model.js";
-import { ErrorHandler } from "../utils/errorHandler.util.js";
+import { ErrorHandler, TryCatch } from "../utils/errorHandler.util.js";
 import { sendResponse } from "../utils/sendResponse.util.js";
 import {
   clearTokenCookies,
@@ -15,55 +13,41 @@ import {
   generateAccessToken,
 } from "../utils/token.util.js";
 import { EXCEPTION_CODES } from "../constants/exceptionCodes.constants.js";
+import { authService } from "../services/auth.service.js";
 
 const login = TryCatch(async (req, res, next) => {
-  const { username, password } = req.body;
-  console.log("username", username, password);
+  const { identifier, password } = req.body;
 
-  const user = await User.findOne({
-    username: username.toLowerCase().trim(),
-  }).select("+passwordHash");
-
-  if (!user || user.isDeleted) {
-    throw new ErrorHandler(
-      "Invalid credentials.",
-      EXCEPTION_CODES.INVALID_CREDENTIALS,
-    );
-  }
-
-  const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-
-  if (!isPasswordValid) {
-    throw new ErrorHandler(
-      "Invalid credentials.",
-      EXCEPTION_CODES.INVALID_CREDENTIALS,
-    );
-  }
-
-  const accessToken = generateAccessToken(user._id);
-  const rawRefreshToken = generateRefreshToken();
-  const hashedToken = hashRefreshToken(rawRefreshToken);
-  const expiresAt = dayjs()
-    .add(REFRESH_TOKEN_EXPIRY_SECONDS, "second")
-    .toDate();
   const deviceInfo = extractDeviceInfo(req);
 
-  await RefreshToken.create({
-    userId: user._id,
-    tokenHash: hashedToken,
-    expiresAt,
-    ...deviceInfo,
+  const { user, accessToken, refreshToken } = await authService.loginUser({
+    identifier,
+    password,
+    deviceInfo,
   });
 
-  setTokenCookies(res, { accessToken, refreshToken: rawRefreshToken });
+  setTokenCookies(res, { accessToken, refreshToken });
 
-  return sendResponse(res, 200, null, "Login successfull", {
-    user: {
-      _id: user._id,
-      name: user.name,
-      username: user.username,
-      email: user.email,
-    },
+  return sendResponse(res, 200, null, "Login successful", {
+    user,
+  });
+});
+
+const register = TryCatch(async (req, res, next) => {
+  const { name, username, email, password } = req.body;
+
+  const deviceInfo = extractDeviceInfo(req);
+
+  const { user, accessToken, refreshToken } = await authService.loginUser({
+    username,
+    password,
+    deviceInfo,
+  });
+
+  setTokenCookies(res, { accessToken, refreshToken });
+
+  return sendResponse(res, 200, null, "Login successful", {
+    user,
   });
 });
 

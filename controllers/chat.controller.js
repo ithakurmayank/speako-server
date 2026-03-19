@@ -1,16 +1,3 @@
-// import { TryCatch } from "../middlewares/error.js";
-// import { ErrorHandler } from "../utils/utility.js";
-// import { User } from "../models/userModel.js";
-// import { Message } from "../models/messageModel.js";
-// import { deletFilesFromCloudinary, emitEvent } from "../utils/features.js";
-// import {
-//   ALERT,
-//   NEW_MESSAGE,
-//   NEW_MESSAGE_ALERT,
-//   REFETCH_CHATS,
-// } from "../constants/events.js";
-// import { getOtherMember } from "../lib/helper.js";
-
 // const newGroupChat = TryCatch(async (req, res, next) => {
 //   const { name, members } = req.body;
 

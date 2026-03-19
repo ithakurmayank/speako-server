@@ -1,18 +1,15 @@
-import { validationResult } from "express-validator";
-import { ErrorHandler } from "../utils/errorHandler.util.js";
-import { EXCEPTION_CODES } from "../constants/exceptionCodes.constants.js";
+const validate = (schema) => (req, res, next) => {
+  const result = schema.safeParse({
+    body: req.body,
+    params: req.params,
+    query: req.query,
+  });
 
-const validateHandler = (req, res, next) => {
-  const errors = validationResult(req);
+  if (!result.success) {
+    return next(result.error);
+  }
 
-  if (errors.isEmpty()) return next();
-
-  const errorMessages = errors
-    .array()
-    .map((err) => err.msg)
-    .join(", ");
-
-  next(new ErrorHandler(errorMessages, EXCEPTION_CODES.INVALID_INPUT));
+  next();
 };
 
-export { validateHandler };
+export { validate };

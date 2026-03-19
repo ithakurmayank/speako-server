@@ -1,67 +1,120 @@
 import multer from "multer";
 import { sendResponse } from "../utils/sendResponse.util.js";
+import { ZodError } from "zod";
+import { EXCEPTION_CODES } from "../constants/exceptionCodes.constants.js";
+import { ErrorHandler } from "../utils/errorHandler.util.js";
 
 const globalErrorMiddleware = (err, req, res, next) => {
   // Multer errors
   if (err instanceof multer.MulterError) {
-    const messages = {
-      LIMIT_FILE_SIZE: "File is too large.",
-      LIMIT_FILE_COUNT: "Too many files uploaded at once.",
-      LIMIT_UNEXPECTED_FILE: "Unexpected field name in form data.",
-    };
+    let error;
 
-    return sendResponse(
-      res,
-      400,
-      err.code,
-      messages[err.code] ?? "File upload error.",
-    );
+    switch (err.code) {
+      case "LIMIT_FILE_SIZE":
+        error = new ErrorHandler(
+          "File is too large.",
+          EXCEPTION_CODES.FILE_TOO_LARGE,
+        );
+        break;
+
+      case "LIMIT_FILE_COUNT":
+      case "LIMIT_UNEXPECTED_FILE":
+        error = new ErrorHandler(
+          "Invalid file upload.",
+          EXCEPTION_CODES.FILE_UPLOAD_FAILED,
+        );
+        break;
+
+      default:
+        error = new ErrorHandler(
+          "File upload error.",
+          EXCEPTION_CODES.FILE_UPLOAD_FAILED,
+        );
+    }
+
+    return sendResponse(res, error.statusCode, error.code, error.message);
   }
 
-  // Invalid file type (custom error from your validator)
-  if (err?.code === "INVALID_FILE_TYPE") {
-    return sendResponse(res, 415, err.code, err.message);
-  }
-
-  // MongoDB duplicate key error
+  // MongoDB duplicate key
   if (err.code === 11000) {
-    err.statusCode = 400;
-    err.message = `Duplicate value entered for ${Object.keys(err.keyValue)} field, please choose another value`;
-    err.code = "DUPLICATE_KEY";
+    const field = Object.keys(err.keyValue).join(", ");
+
+    const error = new ErrorHandler(
+      `Duplicate value for ${field}`,
+      EXCEPTION_CODES.DUPLICATE_RESOURCE,
+    );
+
+    return sendResponse(res, error.statusCode, error.code, error.message);
   }
 
   // Invalid ObjectId
   if (err.name === "CastError") {
-    err.statusCode = 400;
-    err.message = `Resource not found. Invalid: ${err.path}`;
-    err.code = "INVALID_ID";
+    const error = new ErrorHandler(
+      `Invalid ${err.path}`,
+      EXCEPTION_CODES.INVALID_INPUT,
+    );
+
+    return sendResponse(res, error.statusCode, error.code, error.message);
   }
 
   // Token errors
   if (err.name === "TokenExpiredError") {
-    err.statusCode = 401;
-    err.message = "Access token expired.";
+    const error = new ErrorHandler(
+      "Access token expired.",
+      EXCEPTION_CODES.TOKEN_EXPIRED,
+    );
+
+    return sendResponse(res, error.statusCode, error.code, error.message);
   }
 
   if (err.name === "JsonWebTokenError") {
-    err.statusCode = 401;
-    err.message = "Invalid access token.";
+    const error = new ErrorHandler(
+      "Invalid access token.",
+      EXCEPTION_CODES.INVALID_TOKEN,
+    );
+
+    return sendResponse(res, error.statusCode, error.code, error.message);
   }
 
-  // Default error
-  err.message ||= "Internal Server Error";
-  err.statusCode ||= 500;
-  err.code ||= "INTERNAL_ERROR";
+  // Zod validation
+  if (err instanceof ZodError) {
+    const errorMap = new Map();
 
-  return sendResponse(res, err.statusCode, err.code, err.message);
-};
+    for (const e of err.issues) {
+      const field = e.path.slice(1).join(".");
 
-const TryCatch = (functionToWrap) => async (req, res, next) => {
-  try {
-    await functionToWrap(req, res, next);
-  } catch (error) {
-    next(error);
+      if (!errorMap.has(field)) {
+        errorMap.set(field, {
+          field,
+          message: e.message,
+        });
+      }
+    }
+
+    const formattedErrors = Array.from(errorMap.values());
+
+    const error = new ErrorHandler(
+      "Validation failed",
+      EXCEPTION_CODES.VALIDATION_ERROR,
+    );
+
+    return sendResponse(res, error.statusCode, error.code, error.message, {
+      errors: formattedErrors,
+    });
   }
+
+  // If already an ErrorHandler, use it directly
+  if (err instanceof ErrorHandler) {
+    return sendResponse(res, err.statusCode, err.code, err.message);
+  }
+
+  // Fallback (unknown error)
+  const error = new ErrorHandler(
+    err.message || "Internal Server Error",
+    EXCEPTION_CODES.INTERNAL_SERVER_ERROR,
+  );
+
+  return sendResponse(res, error.statusCode, error.code, error.message);
 };
 
-export { globalErrorMiddleware, TryCatch };
+export { globalErrorMiddleware };

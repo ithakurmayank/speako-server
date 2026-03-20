@@ -10,13 +10,13 @@ import {
   generateRefreshToken,
   hashRefreshToken,
 } from "../utils/token.util.js";
-import { isEmail } from "../utils/regex.util.js";
+import { isEmailValid } from "../utils/regex.util.js";
 
 const loginUser = async ({ identifier, password, deviceInfo }) => {
   let query;
 
-  if (isEmail(identifier)) {
-    query = { email: identifier.toLowerCase() };
+  if (isEmailValid(identifier)) {
+    query = { email: identifier };
   } else {
     query = { username: identifier };
   }
@@ -65,6 +65,51 @@ const loginUser = async ({ identifier, password, deviceInfo }) => {
   };
 };
 
-const registerUser = async (userDetails) => {};
+const registerUser = async (userDetails, deviceInfo) => {
+  const { name, username, email, password } = userDetails;
 
-export const authService = { loginUser };
+  const existingUser = await User.findOne({
+    $or: [{ email }, { username }],
+  }).lean();
+
+  if (existingUser) {
+    throw new ErrorHandler(
+      `${existingUser.username === username ? "Username" : "Email"} already exists.`,
+      EXCEPTION_CODES.DUPLICATE_RESOURCE,
+    );
+  }
+
+  const user = await User.create({
+    name,
+    username,
+    email: email,
+    passwordHash: password,
+  });
+
+  const accessToken = generateAccessToken(user._id);
+  const rawRefreshToken = generateRefreshToken();
+  const hashedToken = hashRefreshToken(rawRefreshToken);
+  const expiresAt = dayjs()
+    .add(REFRESH_TOKEN_EXPIRY_SECONDS, "second")
+    .toDate();
+
+  await RefreshToken.create({
+    userId: user._id,
+    tokenHash: hashedToken,
+    expiresAt,
+    ...deviceInfo,
+  });
+
+  return {
+    accessToken,
+    refreshToken: rawRefreshToken,
+    user: {
+      _id: user._id,
+      name: user.name,
+      username: user.username,
+      email: user.email,
+    },
+  };
+};
+
+export const authService = { loginUser, registerUser };

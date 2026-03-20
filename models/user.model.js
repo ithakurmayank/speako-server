@@ -1,8 +1,6 @@
 import { hash } from "bcrypt";
 import mongoose, { model, Schema, Types } from "mongoose";
 
-const { ObjectId } = Types;
-
 const userSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },

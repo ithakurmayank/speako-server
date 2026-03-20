@@ -80,6 +80,7 @@ const globalErrorMiddleware = (err, req, res, next) => {
   if (err instanceof ZodError) {
     const errorMap = new Map();
 
+    //if a field has multiple errors, set only the first error
     for (const e of err.issues) {
       const field = e.path.slice(1).join(".");
 

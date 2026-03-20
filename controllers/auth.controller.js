@@ -38,15 +38,19 @@ const register = TryCatch(async (req, res, next) => {
 
   const deviceInfo = extractDeviceInfo(req);
 
-  const { user, accessToken, refreshToken } = await authService.loginUser({
-    username,
-    password,
+  const { user, accessToken, refreshToken } = await authService.registerUser(
+    {
+      name,
+      username,
+      email,
+      password,
+    },
     deviceInfo,
-  });
+  );
 
   setTokenCookies(res, { accessToken, refreshToken });
 
-  return sendResponse(res, 200, null, "Login successful", {
+  return sendResponse(res, 200, null, "User registered successfully.", {
     user,
   });
 });
@@ -130,4 +134,4 @@ const logout = TryCatch(async (req, res) => {
   return sendResponse(res, 200, null, "Logged out successfully.");
 });
 
-export { login, logout, refresh };
+export { login, register, logout, refresh };

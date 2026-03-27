@@ -26,31 +26,55 @@ const loginSchema = z.object({
       .min(1, "Password cannot be empty."),
   }),
 });
+const registerBaseSchema = z.object({
+  name: z
+    .string({ required_error: "Name is required." })
+    .min(1, "Name cannot be empty.")
+    .max(64, "Name cannot exceed 64 characters.")
+    .trim(),
 
-const registerSchema = z.object({
-  body: z.object({
-    name: z
-      .string({ required_error: "Name is required." })
-      .min(1, "Name cannot be empty."),
+  username: z
+    .string({ required_error: "Username is required." })
+    .min(1, "Username cannot be empty.")
+    .refine(isUsernameValid, { message: "Username is not valid." }),
 
-    username: z
-      .string({ required_error: "Username is required." })
-      .min(1, "Username cannot be empty.")
-      .refine((value) => isUsernameValid(value), {
-        message: "Username is not valid",
-      }),
+  email: z
+    .string({ required_error: "Email is required." })
+    .min(1, "Email cannot be empty.")
+    .refine(isEmailValid, { message: "Invalid email." }),
 
-    email: z
-      .string({ required_error: "Email is required." })
-      .min(1, "Email cannot be empty.")
-      .refine((val) => isEmailValid(val), { message: "Invalid email" }),
+  password: z
+    .string({ required_error: "Password is required." })
+    .refine(isPasswordValid, { message: "Password is not valid." }),
+});
 
-    password: z
-      .string({ required_error: "Password is required." })
-      .refine((val) => isPasswordValid(val), {
-        message: "Password is not valid.",
+const registerWithNewOrgSchema = z.object({
+  body: registerBaseSchema.extend({
+    orgName: z
+      .string({ required_error: "Organization name is required." })
+      .min(1, "Organization name cannot be empty.")
+      .max(100, "Organization name cannot exceed 100 characters.")
+      .trim(),
+
+    orgSlug: z
+      .string({ required_error: "Organization slug is required." })
+      .min(2, "Slug must be at least 2 characters.")
+      .max(48, "Slug cannot exceed 48 characters.")
+      .regex(
+        /^[a-z0-9-]+$/,
+        "Slug can only contain lowercase letters, numbers, and hyphens.",
+      )
+      .refine((val) => !val.startsWith("-") && !val.endsWith("-"), {
+        message: "Slug cannot start or end with a hyphen.",
       }),
   }),
 });
 
-export { loginSchema, registerSchema };
+const registerWithInviteSchema = z.object({
+  body: registerBaseSchema.extend({
+    inviteToken: z
+      .string({ required_error: "Invite token is required." })
+      .min(1, "Invite token cannot be empty."),
+  }),
+});
+export { loginSchema, registerWithNewOrgSchema, registerWithInviteSchema };

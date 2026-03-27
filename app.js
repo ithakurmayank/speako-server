@@ -1,3 +1,4 @@
+import "module-alias/register";
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
@@ -10,7 +11,7 @@ import { corsOptions } from "./configs/cors.config.js";
 import router from "./routes/index.routes.js";
 import { globalErrorMiddleware } from "./middlewares/error.middleware.js";
 import { ErrorHandler } from "./utils/errorHandler.util.js";
-import { EXCEPTION_CODES } from "./constants/exceptionCodes.constants.js";
+import { EXCEPTION_CODES } from "constants/exceptionCodes.constants.js";
 
 validateEnv();
 

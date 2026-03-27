@@ -4,16 +4,31 @@ import {
   login,
   logout,
   refresh,
-  register,
+  registerWithInvite,
+  registerWithNewOrg,
 } from "../controllers/auth.controller.js";
 import { validate } from "../middlewares/validator.middleware.js";
-import { loginSchema, registerSchema } from "../validators/auth.validators.js";
+import {
+  loginSchema,
+  registerWithInviteSchema,
+  registerWithNewOrgSchema,
+} from "../validators/auth.validators.js";
 
 const router = Router();
 
 router.post("/login", validate(loginSchema), login);
 
-router.post("/register", validate(registerSchema), register);
+router.post(
+  "/register",
+  validate(registerWithNewOrgSchema),
+  registerWithNewOrg,
+);
+
+router.post(
+  "/register/invite",
+  validate(registerWithInviteSchema),
+  registerWithInvite,
+);
 
 router.post("/refresh", refresh);
 

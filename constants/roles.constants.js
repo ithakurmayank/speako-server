@@ -25,10 +25,13 @@ const ALL_ROLES = Object.freeze({
   ...OTHER_ROLES,
 });
 
+const ALL_ROLES_VALUES = Object.values(ALL_ROLES);
+
 export {
   OTHER_ROLES,
   OTHER_ROLES_VALUES,
   GROUP_ROLES,
   GROUP_ROLES_VALUES,
   ALL_ROLES,
+  ALL_ROLES_VALUES,
 };

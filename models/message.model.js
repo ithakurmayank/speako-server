@@ -2,7 +2,7 @@ import mongoose, { model, Schema, Types } from "mongoose";
 import {
   DM_MESSAGE_STATUS_VALUES,
   GROUP_MESSAGE_STATUS_VALUES,
-} from "../constants/message.constants";
+} from "../constants/message.constants.js";
 
 const { ObjectId } = Types;
 

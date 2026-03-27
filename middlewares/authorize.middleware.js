@@ -13,7 +13,7 @@ import { ErrorHandler } from "../utils/errorHandler.util.js";
  *     orgId: req.org.id,
  *     teamId:         req.team.id,
  *     channelId:      req.params.channelId,
- *     channelId:      req.params.conversationId,
+ *     conversationId:      req.params.conversationId,
  *   })), handler)
  */
 

@@ -2,6 +2,7 @@ import mongoose, { model, Schema, Types } from "mongoose";
 import {
   USER_CUSTOM_STATUS_VALUES,
   USER_STATUS,
+  USER_STATUS_VALUES,
 } from "../constants/user.constants.js";
 
 const { ObjectId } = Types;
@@ -24,7 +25,6 @@ const userStatusSchema = new Schema(
       default: null,
     },
     lastSeenAt: { type: Date, default: null },
-    // activeSocketId: { type: String, default: null }, // most recent socket connection
   },
   { timestamps: true },
 );

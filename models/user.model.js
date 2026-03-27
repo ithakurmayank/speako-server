@@ -18,7 +18,7 @@ const userSchema = new Schema(
       url: { type: String, default: null },
       publicId: { type: String, default: null },
     },
-    bio: { type: String },
+    bio: { type: String, default: null },
     isEmailVerified: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
@@ -26,10 +26,8 @@ const userSchema = new Schema(
   { timestamps: true },
 );
 
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("passwordHash")) {
-    return next();
-  }
+userSchema.pre("save", async function () {
+  if (!this.isModified("passwordHash")) return;
 
   this.passwordHash = await hash(this.passwordHash, 10);
 });

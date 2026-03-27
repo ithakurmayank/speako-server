@@ -17,12 +17,16 @@ const verifyAccessToken = (token) => {
   return jwt.verify(token, env.JWT_SECRET_KEY);
 };
 
+const generateInvitationToken = () => {
+  return crypto.randomBytes(32).toString("hex"); // 64-char hex string
+};
+
 const generateRefreshToken = () => {
   return crypto.randomBytes(64).toString("hex"); // 128-char hex string
 };
 
 //SHA-256 is fine here — tokens are already high-entropy randoms, so bcrypt's slowness is unnecessary (unlike passwords).
-const hashRefreshToken = (rawToken) => {
+const hashToken = (rawToken) => {
   return crypto.createHash("sha256").update(rawToken).digest("hex");
 };
 
@@ -41,13 +45,13 @@ const setTokenCookies = (res, { accessToken, refreshToken }) => {
   res.cookie("refreshToken", refreshToken, {
     ...baseCookieOptions,
     maxAge: REFRESH_TOKEN_EXPIRY_SECONDS * 1000,
-    path: "/api/auth",
+    path: "/api/v1/auth",
   });
 };
 
 const clearTokenCookies = (res) => {
   res.clearCookie("accessToken");
-  res.clearCookie("refreshToken", { path: "/api/auth" });
+  res.clearCookie("refreshToken", { path: "/api/v1/auth" });
 };
 
 // truncate UA as Real User-Agent strings are typically < 200–300 chars, no need to pass full UA to ua-parser-js
@@ -82,8 +86,9 @@ export {
   clearTokenCookies,
   extractDeviceInfo,
   generateAccessToken,
+  generateInvitationToken,
   generateRefreshToken,
-  hashRefreshToken,
+  hashToken,
   setTokenCookies,
   verifyAccessToken,
 };

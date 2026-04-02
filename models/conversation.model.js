@@ -30,8 +30,6 @@ const conversationSchema = new Schema(
   {
     type: { type: String, enum: CONVERSATION_TYPES_VALUES, required: true },
 
-    orgId: { type: ObjectId, ref: "Organization", required: true },
-
     // Group chat only:
     name: { type: String, default: null, trim: true, maxlength: 128 },
     icon: {
@@ -61,7 +59,7 @@ const conversationSchema = new Schema(
   { timestamps: true },
 );
 
-conversationSchema.index({ "participants.userId": 1, orgId: 1 });
+conversationSchema.index({ "participants.userId": 1 });
 conversationSchema.index(
   { _id: 1, "participants.userId": 1 },
   { unique: true },

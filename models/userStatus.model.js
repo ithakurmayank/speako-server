@@ -29,7 +29,6 @@ const userStatusSchema = new Schema(
   { timestamps: true },
 );
 
-userStatusSchema.index({ userId: 1 }, { unique: true });
 userStatusSchema.index({ status: 1 });
 
 export const UserStatus =

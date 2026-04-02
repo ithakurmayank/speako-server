@@ -12,21 +12,21 @@ import {
   hashToken,
 } from "../utils/token.util.js";
 import { isEmailValid, orgSlugRegex } from "../utils/regex.util.js";
-import { MEMBER_SCOPES, USER_STATUS } from "constants/user.constants.js";
-import { ALL_ROLES } from "constants/roles.constants.js";
-import { Invitation } from "@models/invitation.model.js";
+import { MEMBER_SCOPES, USER_STATUS } from "#constants/user.constants.js";
+import { ALL_ROLES } from "#constants/roles.constants.js";
+import { Invitation } from "#models/invitation.model.js";
 import mongoose from "mongoose";
-import { Membership } from "@models/membership.model.js";
-import { UserStatus } from "@models/userStatus.model.js";
-import { Organization } from "@models/organization.model.js";
+import { Membership } from "#models/membership.model.js";
+import { UserStatus } from "#models/userStatus.model.js";
+import { Organization } from "#models/organization.model.js";
 
 const loginUser = async ({ identifier, password, deviceInfo }) => {
   let query;
 
   if (isEmailValid(identifier)) {
-    query = { email: identifier };
+    query = { email: identifier, isDeleted: false };
   } else {
-    query = { username: identifier };
+    query = { username: identifier, isDeleted: false };
   }
 
   const user = await User.findOne(query).select("+passwordHash");
@@ -73,54 +73,47 @@ const loginUser = async ({ identifier, password, deviceInfo }) => {
   };
 };
 
-const registerWithNewOrg = async (userDetails, deviceInfo) => {
-  const { name, username, email, password, orgName, orgSlug } = userDetails;
+const register = async (userDetails, deviceInfo) => {
+  const { name, username, email, password } = userDetails;
 
-  if (!orgSlugRegex.test(orgSlug)) {
-    throw new ErrorHandler(
-      "Organization slug can only contain lowercase letters, numbers, and hyphens.",
-      EXCEPTION_CODES.VALIDATION_ERROR,
-    );
-  }
+  await confirmUserDoesNotExist(email, username);
+
+  // const existingOrgWithSlug = await Organization.findOne({
+  //   slug: orgSlug,
+  // }).lean();
+  // if (existingOrgWithSlug) {
+  //   throw new ErrorHandler(
+  //     "Organization slug already taken.",
+  //     EXCEPTION_CODES.DUPLICATE_RESOURCE,
+  //   );
+  // }
 
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    await confirmUserDoesNotExist(email, username, session);
-
-    const existingOrg = await Organization.findOne({ slug: orgSlug })
-      .lean()
-      .session(session);
-    if (existingOrg) {
-      throw new ErrorHandler(
-        "Organization slug already taken.",
-        EXCEPTION_CODES.DUPLICATE_RESOURCE,
-      );
-    }
-
     const user = await createUserAndStatus(
       { name, username, email, password },
       session,
     );
 
-    const [org] = await Organization.create(
-      [{ name: orgName, slug: orgSlug, createdBy: user._id }],
-      { session },
-    );
+    // const [org] = await Organization.create(
+    //   [{ name: orgName, slug: orgSlug, createdBy: user._id }],
+    //   { session },
+    // );
 
-    await Membership.create(
-      [
-        {
-          userId: user._id,
-          orgId: org._id,
-          scope: MEMBER_SCOPES.ORG,
-          role: ALL_ROLES.OrgAdmin,
-          joinedAt: new Date(),
-        },
-      ],
-      { session },
-    );
+    // await Membership.create(
+    //   [
+    //     {
+    //       userId: user._id,
+    //       orgId: org._id,
+    //       scope: MEMBER_SCOPES.ORG,
+    //       role: ALL_ROLES.OrgOwner,
+    //       joinedAt: new Date(),
+    //     },
+    //   ],
+    //   { session },
+    // );
 
     const { accessToken, refreshToken } = await createTokens(
       user._id,
@@ -134,11 +127,6 @@ const registerWithNewOrg = async (userDetails, deviceInfo) => {
       accessToken,
       refreshToken,
       user: formatUser(user),
-      org: {
-        _id: org._id,
-        name: org.name,
-        slug: org.slug,
-      },
     };
   } catch (err) {
     await session.abortTransaction();
@@ -156,7 +144,7 @@ const registerWithInvite = async (userDetails, deviceInfo) => {
     isUsed: false,
     expiresAt: { $gt: new Date() },
   })
-    .populate("organizationId", "name slug")
+    .populate("orgId", "name slug")
     .lean();
 
   if (!invitation) {
@@ -174,12 +162,12 @@ const registerWithInvite = async (userDetails, deviceInfo) => {
     );
   }
 
+  await confirmUserDoesNotExist(email, username);
+
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    await confirmUserDoesNotExist(email, username, session);
-
     const user = await createUserAndStatus(
       { name, username, email, password },
       session,
@@ -189,7 +177,7 @@ const registerWithInvite = async (userDetails, deviceInfo) => {
       [
         {
           userId: user._id,
-          organizationId: invitation.organizationId._id,
+          orgId: invitation.orgId._id,
           scope: MEMBER_SCOPES.ORG,
           role: invitation.role,
           invitedBy: invitation.createdBy,
@@ -218,9 +206,9 @@ const registerWithInvite = async (userDetails, deviceInfo) => {
       refreshToken,
       user: formatUser(user),
       org: {
-        _id: invitation.organizationId._id,
-        name: invitation.organizationId.name,
-        slug: invitation.organizationId.slug,
+        _id: invitation.orgId._id,
+        name: invitation.orgId.name,
+        slug: invitation.orgId.slug,
       },
     };
   } catch (err) {
@@ -301,12 +289,10 @@ const logoutUser = async (rawToken) => {
 
 //#region Internal Helpers
 
-async function confirmUserDoesNotExist(email, username, session) {
+async function confirmUserDoesNotExist(email, username) {
   const existing = await User.findOne({
     $or: [{ email }, { username }],
-  })
-    .lean()
-    .session(session);
+  }).lean();
 
   if (!existing) return;
 
@@ -370,7 +356,7 @@ function formatUser(user) {
 
 export const authService = {
   loginUser,
-  registerWithNewOrg,
+  register,
   registerWithInvite,
   refreshToken,
   logoutUser,

@@ -9,7 +9,7 @@ const { ObjectId } = Types;
 const fileSchema = new Schema(
   {
     uploadedBy: { type: ObjectId, ref: "User", required: true },
-    orgId: { type: ObjectId, ref: "Organization", required: true },
+    orgId: { type: ObjectId, ref: "Organization", default: null },
 
     // Where this file was uploaded from — one of these is set:
     channelId: { type: ObjectId, ref: "Channel", default: null },

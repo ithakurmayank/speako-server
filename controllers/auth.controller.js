@@ -25,27 +25,27 @@ const login = TryCatch(async (req, res, next) => {
   });
 });
 
-const registerWithNewOrg = TryCatch(async (req, res, next) => {
-  const { name, username, email, password, orgName, orgSlug } = req.body;
+const register = TryCatch(async (req, res, next) => {
+  const { name, username, email, password } = req.body;
 
   const deviceInfo = extractDeviceInfo(req);
 
-  const { user, org, accessToken, refreshToken } =
-    await authService.registerWithNewOrg(
-      { name, username, email, password, orgName, orgSlug },
-      deviceInfo,
-    );
+  const { user, org, accessToken, refreshToken } = await authService.register(
+    { name, username, email, password },
+    deviceInfo,
+  );
 
   setTokenCookies(res, { accessToken, refreshToken });
 
-  return sendResponse(res, 201, null, "Organization created successfully.", {
+  return sendResponse(res, 201, null, "User registered successfully.", {
     user,
     org,
   });
 });
 
 const registerWithInvite = TryCatch(async (req, res, next) => {
-  const { name, username, email, password, inviteToken } = req.body;
+  const { name, username, email, password } = req.body;
+  const { inviteToken } = req.params;
 
   const deviceInfo = extractDeviceInfo(req);
 
@@ -91,4 +91,4 @@ const logout = TryCatch(async (req, res) => {
   return sendResponse(res, 200, null, "Logged out successfully.");
 });
 
-export { login, logout, refresh, registerWithNewOrg, registerWithInvite };
+export { login, logout, refresh, register, registerWithInvite };

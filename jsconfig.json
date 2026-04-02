@@ -6,11 +6,14 @@
 
     "baseUrl": ".",
     "paths": {
-      "@controllers/*": ["controllers/*"],
-      "@models/*": ["models/*"],
-      "@routes/*": ["routes/*"],
-      "@utils/*": ["utils/*"],
-      "@services/*": ["services/*"]
+      "#controllers/*": ["controllers/*"],
+      "#models/*": ["models/*"],
+      "#routes/*": ["routes/*"],
+      "#utils/*": ["utils/*"],
+      "#services/*": ["services/*"],
+      "#constants/*": ["constants/*"],
+      "#validators/*": ["validators/*"],
+      "#middlewares/*": ["middlewares/*"]
     },
 
     "checkJs": true,

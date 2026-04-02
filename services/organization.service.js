@@ -1,10 +1,10 @@
-import { Invitation } from "@models/invitation.model.js";
-import { User } from "@models/user.model.js";
-import { ErrorHandler } from "@utils/errorHandler.util.js";
-import { generateInvitationToken, hashToken } from "@utils/token.util.js";
-import { ORG_INVITATION_EXPIRY_SECONDS } from "constants/common.constants.js";
-import { EXCEPTION_CODES } from "constants/exceptionCodes.constants.js";
-import { ALL_ROLES_VALUES } from "constants/roles.constants.js";
+import { ORG_INVITATION_EXPIRY_SECONDS } from "#constants/common.constants.js";
+import { EXCEPTION_CODES } from "#constants/exceptionCodes.constants.js";
+import { ALL_ROLES_VALUES } from "#constants/roles.constants.js";
+import { Invitation } from "#models/invitation.model.js";
+import { User } from "#models/user.model.js";
+import { ErrorHandler } from "#utils/errorHandler.util.js";
+import { generateInvitationToken, hashToken } from "#utils/token.util.js";
 import dayjs from "dayjs";
 
 const createOrgInvitation = async ({ orgId, role, email, createdBy }) => {
@@ -15,7 +15,7 @@ const createOrgInvitation = async ({ orgId, role, email, createdBy }) => {
     );
   }
 
-  const existingUser = await User.findOne({ email }).lean();
+  const existingUser = await User.findOne({ email, isDeleted: false }).lean();
   if (existingUser) {
     throw new ErrorHandler(
       "User already exists with this email.",
@@ -46,7 +46,7 @@ const createOrgInvitation = async ({ orgId, role, email, createdBy }) => {
   await Invitation.create({
     orgId,
     createdBy,
-    invitedEmail: email,
+    email,
     role,
     token: hashedToken,
     expiresAt,

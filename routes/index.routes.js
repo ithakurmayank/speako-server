@@ -12,8 +12,8 @@ router.get("/", (req, res) => {
 });
 
 router.use("/auth", authRoute);
-router.use("/organizations", authenticate, organizationRoute);
-// router.use("/user", userRoute);
+router.use("/org", authenticate, organizationRoute);
+router.use("/user", userRoute);
 // router.use("/chat", chatRoute);
 
 export default router;

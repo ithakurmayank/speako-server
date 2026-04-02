@@ -3,6 +3,7 @@ import {
   isEmailValid,
   isPasswordValid,
   isUsernameValid,
+  orgSlugRegex,
 } from "../utils/regex.util.js";
 
 const loginSchema = z.object({
@@ -26,6 +27,7 @@ const loginSchema = z.object({
       .min(1, "Password cannot be empty."),
   }),
 });
+
 const registerBaseSchema = z.object({
   name: z
     .string({ required_error: "Name is required." })
@@ -48,33 +50,35 @@ const registerBaseSchema = z.object({
     .refine(isPasswordValid, { message: "Password is not valid." }),
 });
 
-const registerWithNewOrgSchema = z.object({
-  body: registerBaseSchema.extend({
-    orgName: z
-      .string({ required_error: "Organization name is required." })
-      .min(1, "Organization name cannot be empty.")
-      .max(100, "Organization name cannot exceed 100 characters.")
-      .trim(),
+// const registerWithNewOrgSchema = z.object({
+//   body: registerBaseSchema.extend({
+//     orgName: z
+//       .string({ required_error: "Organization name is required." })
+//       .min(1, "Organization name cannot be empty.")
+//       .max(100, "Organization name cannot exceed 100 characters.")
+//       .trim(),
 
-    orgSlug: z
-      .string({ required_error: "Organization slug is required." })
-      .min(2, "Slug must be at least 2 characters.")
-      .max(48, "Slug cannot exceed 48 characters.")
-      .regex(
-        /^[a-z0-9-]+$/,
-        "Slug can only contain lowercase letters, numbers, and hyphens.",
-      )
-      .refine((val) => !val.startsWith("-") && !val.endsWith("-"), {
-        message: "Slug cannot start or end with a hyphen.",
-      }),
-  }),
-});
+//     orgSlug: z
+//       .string({ required_error: "Organization slug is required." })
+//       .min(2, "Slug must be at least 2 characters.")
+//       .max(48, "Slug cannot exceed 48 characters.")
+//       .regex(
+//         orgSlugRegex,
+//         "Slug can only contain lowercase letters, numbers, and hyphens.",
+//       )
+//       .refine((val) => !val.startsWith("-") && !val.endsWith("-"), {
+//         message: "Slug cannot start or end with a hyphen.",
+//       }),
+//   }),
+// });
 
 const registerWithInviteSchema = z.object({
-  body: registerBaseSchema.extend({
+  body: registerBaseSchema,
+  params: z.object({
     inviteToken: z
       .string({ required_error: "Invite token is required." })
       .min(1, "Invite token cannot be empty."),
   }),
 });
-export { loginSchema, registerWithNewOrgSchema, registerWithInviteSchema };
+
+export { loginSchema, registerBaseSchema, registerWithInviteSchema };

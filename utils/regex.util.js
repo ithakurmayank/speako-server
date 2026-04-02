@@ -1,4 +1,4 @@
-const orgSlugRegex = /^[a-z0-9-]+$/;
+const orgSlugRegex = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 const isEmailValid = (value) => {
   return /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(value);

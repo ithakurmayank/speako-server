@@ -1,11 +1,12 @@
-import { orgService } from "@services/organization.service.js";
+import { orgService } from "#services/organization.service.js";
+import { sendResponse } from "#utils/sendResponse.util.js";
 import { TryCatch } from "../utils/errorHandler.util.js";
-import { sendResponse } from "@utils/sendResponse.util.js";
 
 const createOrgInvitation = TryCatch(async (req, res, next) => {
+  const { orgId } = req.context;
   const { role, email } = req.body;
   const { token } = await orgService.createOrgInvitation({
-    orgId: req.orgId,
+    orgId: orgId,
     role,
     email,
     createdBy: req.userId,

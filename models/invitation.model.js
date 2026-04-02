@@ -1,4 +1,4 @@
-import { ALL_ROLES } from "constants/roles.constants.js";
+import { ALL_ROLES } from "#constants/roles.constants.js";
 import mongoose, { model, Schema, Types } from "mongoose";
 
 const { ObjectId } = Types;
@@ -25,7 +25,6 @@ const invitationSchema = new Schema(
   { timestamps: true },
 );
 
-invitationSchema.index({ token: 1 }, { unique: true });
 invitationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 invitationSchema.index(
   { email: 1, orgId: 1 },

@@ -30,7 +30,7 @@ const getUserProfile = TryCatch(async (req, res, next) => {
     isOwnProfile: false,
   });
 
-  return sendResponse(res, 200, null, "User Details fetched successfully", {
+  return sendResponse(res, 200, null, "User details fetched successfully", {
     userDetails,
   });
 });
@@ -42,4 +42,17 @@ const updateProfile = TryCatch(async (req, res, next) => {
   sendResponse(res, 200, null, "Profile updated successfully.", result);
 });
 
-export { getMyDetails, getMyProfile, getUserProfile, updateProfile };
+const updateUserIcon = TryCatch(async (req, res, next) => {
+  const avatar = req.file;
+  const result = await userService.updateUserIcon(req.userId, avatar);
+
+  sendResponse(res, 200, null, "User icon updated.", result);
+});
+
+export {
+  getMyDetails,
+  getMyProfile,
+  getUserProfile,
+  updateProfile,
+  updateUserIcon,
+};

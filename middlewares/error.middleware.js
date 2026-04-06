@@ -3,19 +3,25 @@ import { sendResponse } from "../utils/sendResponse.util.js";
 import { ZodError } from "zod";
 import { EXCEPTION_CODES } from "../constants/exceptionCodes.constants.js";
 import { ErrorHandler } from "../utils/errorHandler.util.js";
+import { UPLOAD_RULES } from "./multer.middleware.js";
 
 const globalErrorMiddleware = (err, req, res, next) => {
   // Multer errors
   if (err instanceof multer.MulterError) {
     let error;
 
+    const uploadType = err.uploadType;
+    const config = UPLOAD_RULES[uploadType];
+
     switch (err.code) {
-      case "LIMIT_FILE_SIZE":
-        error = new ErrorHandler(
-          "File is too large.",
-          EXCEPTION_CODES.FILE_TOO_LARGE,
-        );
+      case "LIMIT_FILE_SIZE": {
+        const message = config
+          ? `${config.label} must be less than ${config.maxSizeMB}MB`
+          : "File is too large.";
+
+        error = new ErrorHandler(message, EXCEPTION_CODES.FILE_TOO_LARGE);
         break;
+      }
 
       case "LIMIT_FILE_COUNT":
       case "LIMIT_UNEXPECTED_FILE":

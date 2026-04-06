@@ -1,6 +1,7 @@
 import { EXCEPTION_CODES } from "#constants/exceptionCodes.constants.js";
 import { User } from "#models/user.model.js";
 import { ErrorHandler } from "#utils/errorHandler.util.js";
+import { uploadIcon } from "../lib/cloudinary.lib.js";
 
 const getMyDetails = async ({ userId }) => {
   const { _id, email, name, icon } = await User.findOne({
@@ -51,19 +52,33 @@ const updateProfile = async (userId, updatedDetails) => {
   return { user };
 };
 
-// const updateProfile = async (userId, updatedDetails) => {
-//   const { name, bio } = updatedDetails;
-//   const user = await User.findOneAndUpdate(
-//     { _id: userId, isDeleted: false },
-//     { bio, name },
-//     { new: true },
-//   );
+const updateUserIcon = async (userId, avatar) => {
+  if (!avatar)
+    throw new ErrorHandler(
+      "Avatar file is required",
+      EXCEPTION_CODES.MISSING_REQUIRED_FIELDS,
+    );
 
-//   return {user};
-// };
+  const user = await User.findById(userId);
+  if (!user)
+    throw new ErrorHandler(
+      "User not found",
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
+    );
+
+  const { url, publicId } = await uploadIcon(avatar.buffer, "user", {
+    userId,
+  });
+
+  user.icon = { url, publicId };
+  await user.save();
+
+  return { icon: user.icon.url };
+};
 
 export const userService = {
   getMyDetails,
   getProfileDetails,
   updateProfile,
+  updateUserIcon,
 };

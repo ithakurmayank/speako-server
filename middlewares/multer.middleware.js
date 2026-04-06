@@ -53,8 +53,24 @@ const ATTACHMENT_MIME_TYPES = new Set([
 ]);
 
 const MB = 1024 * 1024;
-const ICON_MAX_SIZE = 5 * MB;
-const ATTACHMENT_MAX_SIZE = 100 * MB;
+const ICON_MAX_SIZE_IN_MB = 5;
+const ATTACHMENT_MAX_SIZE_IN_MB = 100;
+
+const UPLOAD_TYPES = {
+  ICON: "icon",
+  ATTACHMENT: "attachment",
+};
+
+const UPLOAD_RULES = {
+  [UPLOAD_TYPES.ICON]: {
+    label: "Icon",
+    maxSizeMB: ICON_MAX_SIZE_IN_MB,
+  },
+  [UPLOAD_TYPES.ATTACHMENT]: {
+    label: "Attachment",
+    maxSizeMB: ATTACHMENT_MAX_SIZE_IN_MB,
+  },
+};
 
 const storage = multer.memoryStorage();
 
@@ -72,14 +88,64 @@ const makeFileFilter = (allowedTypes) => (_req, file, cb) => {
   }
 };
 
-export const iconUpload = multer({
+const iconUpload = multer({
   storage,
-  limits: { fileSize: ICON_MAX_SIZE },
+  limits: { fileSize: ICON_MAX_SIZE_IN_MB * MB },
   fileFilter: makeFileFilter(ICON_MIME_TYPES),
 });
 
-export const attachmentUpload = multer({
+const attachmentUpload = multer({
   storage,
-  limits: { fileSize: ATTACHMENT_MAX_SIZE },
+  limits: { fileSize: ATTACHMENT_MAX_SIZE_IN_MB * MB },
   fileFilter: makeFileFilter(ATTACHMENT_MIME_TYPES),
 });
+
+// creates a middleware which attaches uploadType context to format error message in case of file limit size error
+const createUploadMiddleware = ({
+  upload,
+  type,
+  mode = "single", // "single" | "array" | "fields"
+  field,
+  maxCount, // only for array
+  fieldsConfig, // only for fields
+}) => {
+  return (req, res, next) => {
+    let middleware;
+
+    if (mode === "single") {
+      middleware = upload.single(field);
+    } else if (mode === "array") {
+      middleware = upload.array(field, maxCount);
+    } else if (mode === "fields") {
+      middleware = upload.fields(fieldsConfig);
+    } else {
+      return next(new Error("Invalid upload mode"));
+    }
+
+    // passed our own custom next() like: middleware(req,res,customNext())
+    middleware(req, res, (err) => {
+      if (err) {
+        err.uploadType = type; // attach context
+        return next(err);
+      }
+      next();
+    });
+  };
+};
+
+const iconUploadMiddleware = createUploadMiddleware({
+  upload: iconUpload,
+  type: UPLOAD_TYPES.ICON,
+  mode: "single",
+  field: "avatar",
+});
+
+const attachmentUploadMiddleware = createUploadMiddleware({
+  upload: attachmentUpload,
+  type: UPLOAD_TYPES.ATTACHMENT,
+  mode: "array",
+  field: "files",
+  // maxCount: 10,
+});
+
+export { iconUploadMiddleware, attachmentUploadMiddleware, UPLOAD_RULES };

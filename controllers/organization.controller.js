@@ -12,9 +12,15 @@ const createOrgInvitation = TryCatch(async (req, res, next) => {
     createdBy: req.userId,
   });
 
-  return sendResponse(res, 200, null, "Invitation sent successfully", {
-    token,
-  });
+  return sendResponse(
+    res,
+    200,
+    null,
+    "Invitation sent successfully through email.",
+    {
+      token,
+    },
+  );
 });
 
 export { createOrgInvitation };

@@ -11,6 +11,7 @@ import router from "./routes/index.routes.js";
 import { globalErrorMiddleware } from "./middlewares/error.middleware.js";
 import { ErrorHandler } from "./utils/errorHandler.util.js";
 import { EXCEPTION_CODES } from "#constants/exceptionCodes.constants.js";
+import { startEmailWorker } from "./workers/email.worker.js";
 
 validateEnv();
 
@@ -44,6 +45,7 @@ app.use(globalErrorMiddleware);
 const startServer = async () => {
   try {
     await connectDB(env.MONGO_URI);
+    startEmailWorker();
 
     server.listen(env.PORT, () => {
       console.log(

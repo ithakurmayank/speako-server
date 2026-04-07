@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const env = {
+  APP_NAME: process.env.APP_NAME,
   PORT: process.env.PORT || 3000,
   TOKEN_KEY: process.env.TOKEN_KEY,
   ENVIRONMENT: process.env.NODE_ENV?.trim() || "production",
@@ -12,6 +13,9 @@ const env = {
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN,
   DB_NAME: process.env.DB_NAME,
+  FRONTEND_URL: process.env.FRONTEND_URL,
+  EMAIL_FROM: process.env.EMAIL_FROM,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
 };
 
 const requiredEnvVars = ["MONGO_URI", "JWT_SECRET_KEY"];

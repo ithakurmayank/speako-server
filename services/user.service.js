@@ -76,7 +76,25 @@ const updateUserIcon = async (userId, avatar) => {
   return { icon: user.icon.url };
 };
 
+// Helper services
+const getUserWithLean = async (userId) => {
+  const user = await User.findOne({
+    _id: userId,
+    isDeleted: false,
+  }).lean();
+
+  if (!user) {
+    throw new ErrorHandler(
+      "User not found.",
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
+    );
+  }
+
+  return user;
+};
+
 export const userService = {
+  getUserWithLean,
   getMyDetails,
   getProfileDetails,
   updateProfile,

@@ -91,16 +91,6 @@ const register = async (userDetails, deviceInfo) => {
 
   await confirmUserDoesNotExist(email, username);
 
-  // const existingOrgWithSlug = await Organization.findOne({
-  //   slug: orgSlug,
-  // }).lean();
-  // if (existingOrgWithSlug) {
-  //   throw new ErrorHandler(
-  //     "Organization slug already taken.",
-  //     EXCEPTION_CODES.DUPLICATE_RESOURCE,
-  //   );
-  // }
-
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -109,24 +99,6 @@ const register = async (userDetails, deviceInfo) => {
       { name, username, email, password },
       session,
     );
-
-    // const [org] = await Organization.create(
-    //   [{ name: orgName, slug: orgSlug, createdBy: user._id }],
-    //   { session },
-    // );
-
-    // await Membership.create(
-    //   [
-    //     {
-    //       userId: user._id,
-    //       orgId: org._id,
-    //       scope: MEMBER_SCOPES.ORG,
-    //       role: ALL_ROLES.OrgOwner,
-    //       joinedAt: new Date(),
-    //     },
-    //   ],
-    //   { session },
-    // );
 
     const { accessToken, refreshToken } = await createTokens(
       user._id,
@@ -352,7 +324,6 @@ const forgotPassword = async (email, ipAddress) => {
     ipAddress,
   });
 
-  // Queue email — fire and forget via outbox worker
   await outboxService.queueEmail(
     {
       to: "mt3197356@gmail.com", //delete/remove this when hosting,

@@ -10,15 +10,15 @@ const validate = (schema) => (req, res, next) => {
   }
 
   if (result.data.body !== undefined) {
-    req.body = result.data.body; // ✅ allowed
+    req.body = result.data.body;
   }
 
   if (result.data.params !== undefined) {
-    Object.assign(req.params, result.data.params); // ✅ mutate
+    Object.assign(req.params, result.data.params);
   }
 
   if (result.data.query !== undefined) {
-    Object.assign(req.query, result.data.query); // ✅ mutate
+    Object.assign(req.query, result.data.query);
   }
   next();
 };

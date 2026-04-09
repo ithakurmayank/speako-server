@@ -19,6 +19,19 @@ import mongoose from "mongoose";
 import { Membership } from "#models/membership.model.js";
 import { UserStatus } from "#models/userStatus.model.js";
 import { Organization } from "#models/organization.model.js";
+import {
+  OTP_PURPOSES,
+  OTP_RESEND_COOLDOWN_SECONDS,
+  OTP_TTL_MINUTES,
+} from "#constants/common.constants.js";
+import { generateOtp, hashOtp, verifyOtpHash } from "#utils/otp.util.js";
+import { OtpVerification } from "#models/otpVerification.model.js";
+import { outboxService } from "./outbox.service.js";
+import {
+  NOTIFICATION_TEMPLATE_NAMES,
+  TEMPLATE_TYPES,
+} from "#models/notificationTemplate.model.js";
+import env from "../configs/env.config.js";
 
 const loginUser = async ({ identifier, password, deviceInfo }) => {
   let query;
@@ -287,6 +300,143 @@ const logoutUser = async (rawToken) => {
   }
 };
 
+const forgotPassword = async (email, ipAddress) => {
+  const user = await User.findOne({
+    email: email.toLowerCase().trim(),
+    isDeleted: false,
+  });
+
+  if (!user) return;
+
+  const now = new Date();
+  const latestOtp = await OtpVerification.findOne({
+    userId: user._id,
+    purpose: OTP_PURPOSES.PasswordReset,
+    isUsed: false,
+    expiresAt: { $gt: now },
+  }).sort({ createdAt: -1 });
+
+  if (latestOtp) {
+    const cooldownEndsAt =
+      latestOtp.createdAt.getTime() + OTP_RESEND_COOLDOWN_SECONDS * 1000;
+
+    const secondsRemaining = Math.ceil((cooldownEndsAt - Date.now()) / 1000);
+
+    if (secondsRemaining > 0) {
+      throw new ErrorHandler(
+        `Please wait ${secondsRemaining} second${secondsRemaining === 1 ? "" : "s"} before requesting a new OTP.`,
+        EXCEPTION_CODES.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+
+  // Invalidate all previous unused OTPs
+  await OtpVerification.updateMany(
+    {
+      userId: user._id,
+      purpose: OTP_PURPOSES.PasswordReset,
+      isUsed: false,
+    },
+    { $set: { isUsed: true, usedAt: new Date() } },
+  );
+
+  const rawOtp = generateOtp();
+  const otpHash = await hashOtp(rawOtp);
+  const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+
+  await OtpVerification.create({
+    userId: user._id,
+    otpHash,
+    purpose: OTP_PURPOSES.PasswordReset,
+    expiresAt,
+    ipAddress,
+  });
+
+  // Queue email — fire and forget via outbox worker
+  await outboxService.queueEmail(
+    {
+      to: "mt3197356@gmail.com", //delete/remove this when hosting,
+      // to: user.email,
+      templateName: NOTIFICATION_TEMPLATE_NAMES.PASSWORD_RESET_OTP_EMAIL,
+      variables: {
+        appName: env.APP_NAME,
+        userName: user.name,
+        otp: rawOtp,
+        expiryMinutes: String(OTP_TTL_MINUTES),
+        resetLink: `${env.FRONTEND_URL}/auth/reset-password`,
+        year: dayjs().year(),
+      },
+    },
+    user._id,
+  );
+};
+
+const resetPassword = async (email, otp, newPassword) => {
+  const user = await User.findOne({
+    email: email.toLowerCase().trim(),
+    isDeleted: false,
+  }).select("+passwordHash");
+
+  // Same generic error for user-not-found and bad-OTP so the caller
+  // can't enumerate which emails are registered
+  const genericError = new ErrorHandler(
+    "Invalid or expired OTP.",
+    EXCEPTION_CODES.INVALID_INPUT,
+  );
+
+  if (!user) {
+    throw genericError;
+  }
+
+  const otpDoc = await OtpVerification.findOne({
+    userId: user._id,
+    purpose: OTP_PURPOSES.PasswordReset,
+    isUsed: false,
+    expiresAt: { $gt: new Date() },
+  }).sort({ createdAt: -1 });
+
+  if (!otpDoc) {
+    throw genericError;
+  }
+
+  const isMatch = await verifyOtpHash(otp, otpDoc.otpHash);
+  if (!isMatch) {
+    throw genericError;
+  }
+
+  otpDoc.isUsed = true;
+  otpDoc.usedAt = new Date();
+  await otpDoc.save();
+
+  const isSamePassword = await bcrypt.compare(newPassword, user.passwordHash);
+  if (isSamePassword) {
+    throw new ErrorHandler(
+      "New password must be different from your current password.",
+      EXCEPTION_CODES.INVALID_INPUT,
+    );
+  }
+
+  // pre save hook hashes the password, so pass raw password itself
+  user.passwordHash = newPassword;
+  await user.save();
+
+  // revoke all refresh tokens — force re-login on all devices
+  await RefreshToken.updateMany(
+    { userId: user._id, isRevoked: false },
+    { $set: { isRevoked: true, revokedAt: new Date() } },
+  );
+};
+
+export const authService = {
+  loginUser,
+  register,
+  registerWithInvite,
+  refreshToken,
+  logoutUser,
+  forgotPassword,
+  resetPassword,
+};
+
 //#region Internal Helpers
 
 async function confirmUserDoesNotExist(email, username) {
@@ -353,11 +503,3 @@ function formatUser(user) {
 }
 
 //#endregion
-
-export const authService = {
-  loginUser,
-  register,
-  registerWithInvite,
-  refreshToken,
-  logoutUser,
-};

@@ -1,4 +1,5 @@
-import { OUTBOX_CONFIG } from "#constants/notifications.constants.js";
+import { OUTBOX_CONFIG } from "#constants/common.constants.js";
+import { TEMPLATE_TYPES } from "#models/notificationTemplate.model.js";
 import { OutboxMessage } from "#models/outboxMessage.model.js";
 import { emailService } from "#services/email.service.js";
 import { templateService } from "#services/template.service.js";
@@ -7,6 +8,7 @@ const { MAX_RETRIES, POLL_INTERVAL_MS } = OUTBOX_CONFIG;
 
 const processOutbox = async () => {
   const messages = await OutboxMessage.find({
+    type: TEMPLATE_TYPES.EMAIL,
     isProcessed: false,
     isDeleted: false,
     nextAttemptAt: { $lte: new Date() },
@@ -16,15 +18,15 @@ const processOutbox = async () => {
 
   for (const msg of messages) {
     try {
-      const { to, templateName, templateType, variables } = msg.payload;
+      const { to, templateName, variables } = msg.payload;
 
       const { subject, html } = await templateService.renderTemplate(
         templateName,
-        templateType,
+        TEMPLATE_TYPES.EMAIL,
         variables,
       );
 
-      const response = await emailService.sendEmail({ to, subject, html });
+      await emailService.sendEmail({ to, subject, html });
 
       await OutboxMessage.findByIdAndUpdate(msg._id, {
         isProcessed: true,

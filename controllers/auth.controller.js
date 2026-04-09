@@ -91,4 +91,39 @@ const logout = TryCatch(async (req, res) => {
   return sendResponse(res, 200, null, "Logged out successfully.");
 });
 
-export { login, logout, refresh, register, registerWithInvite };
+const forgotPassword = TryCatch(async (req, res) => {
+  const { email } = req.body;
+  const { ipAddress } = extractDeviceInfo(req);
+
+  await authService.forgotPassword(email, ipAddress);
+
+  return sendResponse(
+    res,
+    200,
+    null,
+    "If that email is registered, you'll receive an OTP shortly.",
+  );
+});
+
+const resetPassword = TryCatch(async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+
+  await authService.resetPassword(email, otp, newPassword);
+
+  return sendResponse(
+    res,
+    200,
+    null,
+    "Password reset successfully. Please log in with your new password.",
+  );
+});
+
+export {
+  login,
+  logout,
+  refresh,
+  register,
+  registerWithInvite,
+  forgotPassword,
+  resetPassword,
+};

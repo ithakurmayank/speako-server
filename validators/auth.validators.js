@@ -81,4 +81,38 @@ const registerWithInviteSchema = z.object({
   }),
 });
 
-export { loginSchema, registerBaseSchema, registerWithInviteSchema };
+const forgotPasswordSchema = z.object({
+  body: z.object({
+    email: z
+      .string({ required_error: "Email is required." })
+      .min(1, "Email cannot be empty.")
+      .refine(isEmailValid, { message: "Invalid email." }),
+  }),
+});
+
+const resetPasswordSchema = z.object({
+  body: z.object({
+    email: z
+      .string({ required_error: "Email is required." })
+      .min(1, "Email cannot be empty.")
+      .refine(isEmailValid, { message: "Invalid email." }),
+
+    otp: z
+      .string({ required_error: "OTP is required." })
+      .min(1, "OTP is required.")
+      .length(6, "OTP must be exactly 6 digits.")
+      .regex(/^\d+$/, "OTP must contain digits only."),
+
+    newPassword: z
+      .string({ required_error: "Password is required." })
+      .refine(isPasswordValid, { message: "Password is not valid." }),
+  }),
+});
+
+export {
+  loginSchema,
+  registerBaseSchema,
+  registerWithInviteSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+};

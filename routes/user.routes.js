@@ -15,7 +15,7 @@ import { Router } from "express";
 const router = Router({ mergeParams: true });
 
 router.use(authenticate);
-router.get("/me", getMyDetails);
+router.get("/me/:checkParams", getMyDetails);
 router.get("/profile/me", getMyProfile);
 router.get("/profile/:id", getUserProfile);
 router.put("/profile", validate(updateProfileSchema), updateProfile);

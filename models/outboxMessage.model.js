@@ -1,10 +1,11 @@
 import mongoose, { model, Schema, Types } from "mongoose";
+import { TEMPLATE_TYPES_VALUES } from "./notificationTemplate.model.js";
 
 const { ObjectId } = Types;
 
 const outboxMessageSchema = new Schema(
   {
-    type: { type: String, required: true, maxlength: 200 },
+    type: { type: String, required: true, enum: TEMPLATE_TYPES_VALUES },
     payload: { type: Schema.Types.Mixed, required: true },
     retryCount: { type: Number, default: 0 },
     createdBy: { type: ObjectId, ref: "User", default: null },

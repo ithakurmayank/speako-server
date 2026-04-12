@@ -42,9 +42,9 @@ const updateProfile = TryCatch(async (req, res, next) => {
   sendResponse(res, 200, null, "Profile updated successfully.", result);
 });
 
-const updateUserIcon = TryCatch(async (req, res, next) => {
+const updateUserAvatar = TryCatch(async (req, res, next) => {
   const avatar = req.file;
-  const result = await userService.updateUserIcon(req.userId, avatar);
+  const result = await userService.updateUserAvatar(req.userId, avatar);
 
   sendResponse(res, 200, null, "User icon updated.", result);
 });
@@ -54,5 +54,5 @@ export {
   getMyProfile,
   getUserProfile,
   updateProfile,
-  updateUserIcon,
+  updateUserAvatar,
 };

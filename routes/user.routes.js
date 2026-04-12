@@ -3,7 +3,7 @@ import {
   getMyProfile,
   getUserProfile,
   updateProfile,
-  updateUserIcon,
+  updateUserAvatar,
 } from "#controllers/user.controller.js";
 import { authenticate } from "#middlewares/authenticate.middleware.js";
 import { authorize } from "#middlewares/authorize.middleware.js";
@@ -19,6 +19,6 @@ router.get("/me/:checkParams", getMyDetails);
 router.get("/profile/me", getMyProfile);
 router.get("/profile/:id", getUserProfile);
 router.put("/profile", validate(updateProfileSchema), updateProfile);
-router.put("/profile/avatar", iconUploadMiddleware, updateUserIcon);
+router.put("/profile/avatar", iconUploadMiddleware, updateUserAvatar);
 
 export default router;

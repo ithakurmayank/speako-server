@@ -49,6 +49,10 @@ const registerBaseSchema = z.object({
     .refine(isPasswordValid, { message: "Password is not valid." }),
 });
 
+const registerSchema = z.object({
+  body: registerBaseSchema,
+});
+
 const registerWithInviteSchema = z.object({
   body: registerBaseSchema,
   params: z.object({
@@ -88,7 +92,7 @@ const resetPasswordSchema = z.object({
 
 export {
   loginSchema,
-  registerBaseSchema,
+  registerSchema,
   registerWithInviteSchema,
   forgotPasswordSchema,
   resetPasswordSchema,

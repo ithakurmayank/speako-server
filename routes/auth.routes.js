@@ -13,7 +13,7 @@ import { validate } from "../middlewares/validator.middleware.js";
 import {
   loginSchema,
   registerWithInviteSchema,
-  registerBaseSchema,
+  registerSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
 } from "../validators/auth.validators.js";
@@ -22,7 +22,7 @@ const router = Router();
 
 router.post("/login", validate(loginSchema), login);
 
-router.post("/register", validate(registerBaseSchema), register);
+router.post("/register", validate(registerSchema), register);
 
 router.post(
   "/register/:inviteToken",

@@ -137,14 +137,14 @@ const iconUploadMiddleware = createUploadMiddleware({
   upload: iconUpload,
   type: UPLOAD_TYPES.ICON,
   mode: "single",
-  field: "avatar",
+  field: "icon",
 });
 
 const attachmentUploadMiddleware = createUploadMiddleware({
   upload: attachmentUpload,
   type: UPLOAD_TYPES.ATTACHMENT,
   mode: "array",
-  field: "files",
+  field: "attachments",
   // maxCount: 10,
 });
 

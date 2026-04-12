@@ -52,10 +52,10 @@ const updateProfile = async (userId, updatedDetails) => {
   return { user };
 };
 
-const updateUserIcon = async (userId, avatar) => {
+const updateUserAvatar = async (userId, avatar) => {
   if (!avatar)
     throw new ErrorHandler(
-      "Avatar file is required",
+      "Missing field - icon",
       EXCEPTION_CODES.MISSING_REQUIRED_FIELDS,
     );
 
@@ -77,7 +77,7 @@ const updateUserIcon = async (userId, avatar) => {
 };
 
 // Helper services
-const getUserWithLean = async (userId) => {
+const getUserWithLean = async (userId, errorMessage = null) => {
   const user = await User.findOne({
     _id: userId,
     isDeleted: false,
@@ -85,7 +85,7 @@ const getUserWithLean = async (userId) => {
 
   if (!user) {
     throw new ErrorHandler(
-      "User not found.",
+      errorMessage ?? "User not found.",
       EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
@@ -98,5 +98,5 @@ export const userService = {
   getMyDetails,
   getProfileDetails,
   updateProfile,
-  updateUserIcon,
+  updateUserAvatar,
 };

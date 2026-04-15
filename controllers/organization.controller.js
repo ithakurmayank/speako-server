@@ -2,6 +2,38 @@ import { orgService } from "#services/organization.service.js";
 import { sendResponse } from "#utils/sendResponse.util.js";
 import { TryCatch } from "../utils/errorHandler.util.js";
 
+//#region GET controllers
+const getOrganization = TryCatch(async (req, res, next) => {
+  const { orgId } = req.params;
+  const result = await orgService.getOrganization({
+    orgId,
+    userId: req.userId,
+  });
+
+  return sendResponse(res, 200, null, "Org details fetched.", result);
+});
+
+const getMyOrganizations = TryCatch(async (req, res, next) => {
+  const result = await orgService.getMyOrganizations({
+    userId: req.userId,
+  });
+
+  return sendResponse(res, 200, null, "All organizations fetched.", result);
+});
+
+const getOrganizationMembers = TryCatch(async (req, res, next) => {
+  const result = await orgService.getOrganizationMembers({
+    orgId: req.context.orgId,
+    userId: req.userId,
+    query: req.query,
+  });
+
+  return sendResponse(res, 200, null, "All organizations fetched.", result);
+});
+
+//#endregion
+
+//#region UPDATE services
 const createOrganization = TryCatch(async (req, res, next) => {
   const { name, slug } = req.body;
   const result = await orgService.createOrganization({
@@ -89,7 +121,12 @@ const updateOrganizationMemberRole = TryCatch(async (req, res, next) => {
   return sendResponse(res, 200, null, "Member role updated.");
 });
 
+//#endregion
+
 export {
+  getOrganization,
+  getMyOrganizations,
+  getOrganizationMembers,
   createOrganization,
   updateOrganization,
   updateOrganizationIcon,

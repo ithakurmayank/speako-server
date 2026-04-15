@@ -3,6 +3,9 @@ import {
   addMemberToOrganization,
   createOrganization,
   createOrgInvitation,
+  getMyOrganizations,
+  getOrganization,
+  getOrganizationMembers,
   updateOrganization,
   updateOrganizationIcon,
   updateOrganizationMemberRole,
@@ -11,6 +14,7 @@ import {
   addMemberToOrganizationSchema,
   createOrganizationSchema,
   createOrgInvitationSchema,
+  getOrganizationMembersSchema,
   updateOrganizationMemberRoleSchema,
   updateOrganizationSchema,
 } from "#validators/organization.validators.js";
@@ -23,6 +27,18 @@ import { iconUploadMiddleware } from "#middlewares/multer.middleware.js";
 const router = Router({ mergeParams: true });
 
 router.use(authenticate);
+//#region GET controllers
+router.get("/my", getMyOrganizations);
+router.get("/:orgId", getOrganization);
+router.get(
+  "/:orgId/members",
+  validate(getOrganizationMembersSchema),
+  getOrganizationMembers,
+);
+
+//#endregion
+
+//#region UPDATE services
 router.post("/", validate(createOrganizationSchema), createOrganization);
 router.put(
   "/:orgId",
@@ -54,5 +70,7 @@ router.put(
   validate(updateOrganizationMemberRoleSchema),
   updateOrganizationMemberRole,
 );
+
+//#endregion
 
 export default router;

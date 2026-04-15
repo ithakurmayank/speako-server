@@ -2,6 +2,23 @@ import { ALL_ROLES_VALUES, ORG_ROLES } from "#constants/roles.constants.js";
 import { isEmailValid, orgSlugRegex } from "#utils/regex.util.js";
 import { z } from "zod";
 
+const getOrganizationMembersSchema = z.object({
+  params: z.object({
+    orgId: z
+      .string({ required_error: "Organization ID is required." })
+      .min(1, "Organization ID cannot be empty."),
+    userId: z
+      .string({ required_error: "User ID is required." })
+      .min(1, "User ID cannot be empty."),
+  }),
+  query: z.object({
+    search: z.string().optional(),
+    role: z.string().optional(),
+    pageNumber: z.string().optional(),
+    pageSize: z.string().optional(),
+  }),
+});
+
 const createOrganizationSchema = z.object({
   body: z.object({
     name: z
@@ -112,6 +129,7 @@ const updateOrganizationMemberRoleSchema = z.object({
 });
 
 export {
+  getOrganizationMembersSchema,
   createOrganizationSchema,
   updateOrganizationSchema,
   createOrgInvitationSchema,

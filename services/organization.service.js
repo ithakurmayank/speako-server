@@ -15,7 +15,152 @@ import { Membership } from "#models/membership.model.js";
 import { MEMBER_SCOPES } from "#constants/user.constants.js";
 import mongoose from "mongoose";
 import { uploadIcon } from "../lib/cloudinary.lib.js";
+import {
+  getOffsetPaginationValues,
+  getPaginatedResponse,
+} from "#utils/pagination.util.js";
 
+//#region GET services
+const getOrganization = async ({ orgId, userId }) => {
+  const isMember = await Membership.exists({
+    orgId,
+    userId,
+    scope: MEMBER_SCOPES.ORG,
+  });
+
+  if (!isMember) {
+    throw new ErrorHandler(
+      "Organization not found.",
+      EXCEPTION_CODES.NOT_FOUND,
+    );
+  }
+
+  const org = await Organization.findOne({
+    _id: orgId,
+    isDeleted: false,
+  }).lean();
+
+  if (!org) {
+    throw new ErrorHandler(
+      "Organization not found.",
+      EXCEPTION_CODES.NOT_FOUND,
+    );
+  }
+
+  return {
+    id: org._id,
+    name: org.name,
+    slug: org.slug,
+    iconUrl: org.icon?.url ?? null,
+    createdAt: org.createdAt,
+  };
+};
+
+const getMyOrganizations = async ({ userId }) => {
+  const memberships = await Membership.find({
+    userId,
+    scope: MEMBER_SCOPES.ORG,
+  })
+    .populate({
+      path: "orgId",
+      match: { isDeleted: false },
+      select: "name slug icon createdAt",
+    })
+    .sort({ joinedAt: 1 })
+    .lean();
+
+  return memberships
+    .filter((m) => m.orgId != null)
+    .map((m) => ({
+      id: m.orgId._id,
+      name: m.orgId.name,
+      slug: m.orgId.slug,
+      iconUrl: m.orgId.icon?.url ?? null,
+      createdAt: m.orgId.createdAt,
+      role: m.role,
+      joinedAt: m.joinedAt,
+    }));
+};
+
+const getOrganizationMembers = async ({ orgId, userId, query }) => {
+  const isMember = await Membership.exists({
+    userId,
+    orgId,
+    scope: MEMBER_SCOPES.ORG,
+  });
+
+  if (!isMember) {
+    throw new ErrorHandler(
+      "Organization not found.",
+      EXCEPTION_CODES.NOT_FOUND,
+    );
+  }
+
+  const { search, role, pageNumber, pageSize } = query;
+  const { page, size, skip, limit } = getOffsetPaginationValues({
+    pageNumber,
+    pageSize,
+  });
+
+  const filter = {
+    orgId,
+    scope: MEMBER_SCOPES.ORG,
+  };
+
+  if (role) {
+    filter.role = role;
+  }
+
+  // If search is provided, first resolve matching userIds from User collection
+  let userIdFilter = null;
+  if (search) {
+    const term = search.trim();
+    const matchingUsers = await User.find({
+      $or: [
+        { name: { $regex: term, $options: "i" } },
+        { username: { $regex: term, $options: "i" } },
+      ],
+    })
+      .select("_id")
+      .lean();
+
+    userIdFilter = matchingUsers.map((u) => u._id);
+    filter.userId = { $in: userIdFilter };
+  }
+
+  const [totalCount, memberships] = await Promise.all([
+    Membership.countDocuments(filter),
+    Membership.find(filter)
+      .populate({
+        path: "userId",
+        select: "name username icon",
+      })
+      .sort({ joinedAt: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+  ]);
+
+  const items = memberships.map((m) => ({
+    membershipId: m._id,
+    userId: m.userId._id,
+    name: m.userId.name,
+    username: m.userId.username,
+    iconUrl: m.userId.icon?.url ?? null,
+    role: m.role,
+    joinedAt: m.joinedAt,
+  }));
+
+  return getPaginatedResponse({
+    items,
+    totalCount,
+    pageNumber: page,
+    pageSize: size,
+  });
+};
+//#endregion
+
+//#region UPDATE services
 const createOrganization = async ({ userId, name, slug }) => {
   const user = await userService.getUserWithLean(userId);
 
@@ -233,7 +378,12 @@ const updateOrganizationMemberRole = async ({ orgId, membershipId, role }) => {
   }
 };
 
+//#endregion
+
 export const orgService = {
+  getOrganization,
+  getMyOrganizations,
+  getOrganizationMembers,
   createOrganization,
   updateOrganization,
   updateOrganizationIcon,

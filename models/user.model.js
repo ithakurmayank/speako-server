@@ -26,6 +26,11 @@ const userSchema = new Schema(
   { timestamps: true },
 );
 
+userSchema.index({
+  name: "text",
+  username: "text",
+});
+
 userSchema.pre("save", async function () {
   if (!this.isModified("passwordHash")) return;
 

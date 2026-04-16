@@ -14,16 +14,11 @@ const getOffsetPaginationValues = (query = {}) => {
   };
 };
 
-export const getPaginatedResponse = ({
-  items,
-  totalCount,
-  pageNumber,
-  pageSize,
-}) => {
+const getPaginatedResponse = ({ data, totalCount, pageNumber, pageSize }) => {
   const totalPages = pageSize > 0 ? Math.ceil(totalCount / pageSize) : 0;
 
   return {
-    items,
+    data,
     totalCount,
     pageNumber,
     pageSize,

@@ -21,14 +21,35 @@ const getMyOrganizations = TryCatch(async (req, res, next) => {
   return sendResponse(res, 200, null, "All organizations fetched.", result);
 });
 
-const getOrganizationMembers = TryCatch(async (req, res, next) => {
-  const result = await orgService.getOrganizationMembers({
-    orgId: req.context.orgId,
+const getOrganizationAllMembers = TryCatch(async (req, res, next) => {
+  const result = await orgService.getOrganizationAllMembers({
+    orgId: req.params.orgId,
     userId: req.userId,
     query: req.query,
   });
 
-  return sendResponse(res, 200, null, "All organizations fetched.", result);
+  return sendResponse(res, 200, null, "Organization members fetched.", result);
+});
+
+const getOrganizationMember = TryCatch(async (req, res, next) => {
+  const { orgId, membershipId } = req.params;
+  const result = await orgService.getOrganizationMember({
+    orgId,
+    userId: req.userId,
+    membershipId,
+  });
+
+  return sendResponse(res, 200, null, "Member details fetched.", result);
+});
+
+const getOrganizationPendingInvites = TryCatch(async (req, res, next) => {
+  const { orgId } = req.params;
+  const result = await orgService.getOrganizationPendingInvites({
+    orgId,
+    query: req.query,
+  });
+
+  return sendResponse(res, 200, null, "Pending invites fetched.", result);
 });
 
 //#endregion
@@ -121,16 +142,55 @@ const updateOrganizationMemberRole = TryCatch(async (req, res, next) => {
   return sendResponse(res, 200, null, "Member role updated.");
 });
 
+const transferOrganizationOwnership = TryCatch(async (req, res, next) => {
+  const { orgId } = req.params;
+  const { membershipId } = req.params;
+  await orgService.transferOrganizationOwnership({
+    orgId,
+    userId: req.userId,
+    membershipId,
+  });
+
+  return sendResponse(res, 200, null, "Organization ownership transferred.");
+});
+
+const leaveOrganization = TryCatch(async (req, res, next) => {
+  const { orgId } = req.params;
+  await orgService.leaveOrganization({
+    orgId,
+    userId: req.userId,
+  });
+
+  return sendResponse(res, 200, null, "Left organization successfully.");
+});
+
+const removeOrganizationMember = TryCatch(async (req, res, next) => {
+  const { orgId } = req.context;
+  const { membershipId } = req.params;
+  await orgService.removeOrganizationMember({
+    orgId,
+    userId: req.userId,
+    membershipId,
+  });
+
+  return sendResponse(res, 200, null, "Member removed successfully.");
+});
+
 //#endregion
 
 export {
   getOrganization,
   getMyOrganizations,
-  getOrganizationMembers,
+  getOrganizationAllMembers,
+  getOrganizationMember,
+  getOrganizationPendingInvites,
   createOrganization,
   updateOrganization,
   updateOrganizationIcon,
   createOrgInvitation,
   addMemberToOrganization,
   updateOrganizationMemberRole,
+  transferOrganizationOwnership,
+  leaveOrganization,
+  removeOrganizationMember,
 };

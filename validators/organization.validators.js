@@ -7,10 +7,8 @@ const getOrganizationMembersSchema = z.object({
     orgId: z
       .string({ required_error: "Organization ID is required." })
       .min(1, "Organization ID cannot be empty."),
-    userId: z
-      .string({ required_error: "User ID is required." })
-      .min(1, "User ID cannot be empty."),
   }),
+
   query: z.object({
     search: z.string().optional(),
     role: z.string().optional(),

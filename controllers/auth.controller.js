@@ -12,7 +12,7 @@ const login = TryCatch(async (req, res, next) => {
 
   const deviceInfo = extractDeviceInfo(req);
 
-  const { user, accessToken, refreshToken } = await authService.loginUser({
+  const { accessToken, refreshToken } = await authService.loginUser({
     identifier,
     password,
     deviceInfo,
@@ -20,47 +20,30 @@ const login = TryCatch(async (req, res, next) => {
 
   setTokenCookies(res, { accessToken, refreshToken });
 
-  return sendResponse(res, 200, null, "Login successful", {
-    user,
-  });
+  return sendResponse(res, 200, null, "Login successful");
 });
 
 const register = TryCatch(async (req, res, next) => {
-  const { name, username, email, password } = req.body;
+  const { name, username, email, password, inviteToken } = req.body;
 
   const deviceInfo = extractDeviceInfo(req);
 
-  const { user, org, accessToken, refreshToken } = await authService.register(
-    { name, username, email, password },
-    deviceInfo,
-  );
+  if (inviteToken) {
+  }
+
+  const { accessToken, refreshToken } = inviteToken
+    ? await authService.registerWithInvite(
+        { name, username, email, password, inviteToken },
+        deviceInfo,
+      )
+    : await authService.register(
+        { name, username, email, password },
+        deviceInfo,
+      );
 
   setTokenCookies(res, { accessToken, refreshToken });
 
-  return sendResponse(res, 201, null, "User registered successfully.", {
-    user,
-    org,
-  });
-});
-
-const registerWithInvite = TryCatch(async (req, res, next) => {
-  const { name, username, email, password } = req.body;
-  const { inviteToken } = req.params;
-
-  const deviceInfo = extractDeviceInfo(req);
-
-  const { user, org, accessToken, refreshToken } =
-    await authService.registerWithInvite(
-      { name, username, email, password, inviteToken },
-      deviceInfo,
-    );
-
-  setTokenCookies(res, { accessToken, refreshToken });
-
-  return sendResponse(res, 201, null, "Joined organization successfully.", {
-    user,
-    org,
-  });
+  return sendResponse(res, 201, null, "User registered successfully.");
 });
 
 const refresh = TryCatch(async (req, res) => {
@@ -118,12 +101,32 @@ const resetPassword = TryCatch(async (req, res) => {
   );
 });
 
+const verifyUserEmail = TryCatch(async (req, res) => {
+  const { otp } = req.body;
+
+  await authService.verifyUserEmail({ userId: req.userId, otp });
+
+  return sendResponse(res, 200, null, "Email verified successfully.");
+});
+
+const resendVerificationOtp = TryCatch(async (req, res) => {
+  await authService.resendVerificationOtp({ userId: req.userId });
+
+  return sendResponse(
+    res,
+    200,
+    null,
+    "If that email exists, you'll receive an OTP shortly.",
+  );
+});
+
 export {
   login,
   logout,
   refresh,
   register,
-  registerWithInvite,
   forgotPassword,
   resetPassword,
+  verifyUserEmail,
+  resendVerificationOtp,
 };

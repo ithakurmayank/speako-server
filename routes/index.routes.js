@@ -11,7 +11,7 @@ router.get("/", (req, res) => {
 });
 
 router.use("/auth", authRoute);
-router.use("/org", organizationRoute);
+router.use("/orgs", organizationRoute);
 router.use("/user", userRoute);
 // router.use("/chat", chatRoute);
 

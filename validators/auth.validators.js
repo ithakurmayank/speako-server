@@ -27,38 +27,32 @@ const loginSchema = z.object({
   }),
 });
 
-const registerBaseSchema = z.object({
-  name: z
-    .string({ required_error: "Name is required." })
-    .min(1, "Name cannot be empty.")
-    .max(64, "Name cannot exceed 64 characters.")
-    .trim(),
-
-  username: z
-    .string({ required_error: "Username is required." })
-    .min(1, "Username cannot be empty.")
-    .refine(isUsernameValid, { message: "Username is not valid." }),
-
-  email: z
-    .string({ required_error: "Email is required." })
-    .min(1, "Email cannot be empty.")
-    .refine(isEmailValid, { message: "Invalid email." }),
-
-  password: z
-    .string({ required_error: "Password is required." })
-    .refine(isPasswordValid, { message: "Password is not valid." }),
-});
-
 const registerSchema = z.object({
-  body: registerBaseSchema,
-});
+  body: z.object({
+    name: z
+      .string({ required_error: "Name is required." })
+      .min(1, "Name cannot be empty.")
+      .max(64, "Name cannot exceed 64 characters.")
+      .trim(),
 
-const registerWithInviteSchema = z.object({
-  body: registerBaseSchema,
-  params: z.object({
+    username: z
+      .string({ required_error: "Username is required." })
+      .min(1, "Username cannot be empty.")
+      .refine(isUsernameValid, { message: "Username is not valid." }),
+
+    email: z
+      .string({ required_error: "Email is required." })
+      .min(1, "Email cannot be empty.")
+      .refine(isEmailValid, { message: "Invalid email." }),
+
+    password: z
+      .string({ required_error: "Password is required." })
+      .refine(isPasswordValid, { message: "Password is not valid." }),
+
     inviteToken: z
-      .string({ required_error: "Invite token is required." })
-      .min(1, "Invite token cannot be empty."),
+      .string()
+      .min(1, { message: "Invite token cannot be empty." })
+      .optional(),
   }),
 });
 
@@ -90,10 +84,33 @@ const resetPasswordSchema = z.object({
   }),
 });
 
+const changePasswordSchema = z.object({
+  body: z.object({
+    newPassword: z
+      .string({ required_error: "Password is required." })
+      .refine(isPasswordValid, { message: "Password is not valid." }),
+
+    currentPassword: z
+      .string({ required_error: "Password is required." })
+      .refine(isPasswordValid, { message: "Password is not valid." }),
+  }),
+});
+
+const verifyUserEmailSchema = z.object({
+  body: z.object({
+    otp: z
+      .string({ required_error: "OTP is required." })
+      .min(1, "OTP is required.")
+      .length(6, "OTP must be exactly 6 digits.")
+      .regex(/^\d+$/, "OTP must contain digits only."),
+  }),
+});
+
 export {
   loginSchema,
   registerSchema,
-  registerWithInviteSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  changePasswordSchema,
+  verifyUserEmailSchema,
 };

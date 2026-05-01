@@ -4,6 +4,7 @@ const PERMISSIONS = Object.freeze({
   ORG_BILLING: "org:billing",
   ORG_AUDIT_LOG_VIEW: "org:auditlog:view",
   ORG_MEMBERS_INVITE: "org:members:invite",
+  ORG_INVITES_MANAGE: "org:invites:manage",
   ORG_MEMBERS_REMOVE: "org:members:remove",
   ORG_MEMBERS_ROLE_CHANGE: "org:members:role:change",
   ORG_TEAMS_CREATE: "org:teams:create",

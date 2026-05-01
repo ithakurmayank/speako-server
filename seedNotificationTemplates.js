@@ -33,6 +33,14 @@ const templates = [
     bodyText: getPasswordResetOtpHtml(),
     isActive: true,
   },
+  {
+    name: NOTIFICATION_TEMPLATE_NAMES.USER_EMAIL_VERIFICATION_EMAIL,
+    templateType: TEMPLATE_TYPES.EMAIL,
+    subjectText:
+      "You've received an OTP from {{appName}} to verify your email ",
+    bodyText: getUserEmailVerificationEmailHtml(),
+    isActive: true,
+  },
 ];
 
 // ─── Seed runner ─────────────────────────────────────────────────────────────
@@ -383,4 +391,159 @@ function getPasswordResetOtpHtml() {
   </table>
 </body>
 </html>`;
+}
+
+// ─── Template HTML ────────────────────────────────────────────────────────────
+// Variables wrapped in {{}} are replaced at send-time by template.service.js:
+//   {{userName}}      — recipient's display name
+//   {{appName}}         – your product name, e.g. "Waveline"
+//   {{otp}}           — the 6-digit OTP
+//   {{expiryMinutes}} — OTP TTL in minutes
+//   {{verificationLink}}     — Verification UI URL
+//   {{year}}          — current year (footer)
+function getUserEmailVerificationEmailHtml() {
+  return /* html */ `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+
+    @media only screen and (max-width: 600px) {
+      .container { width: 100% !important; }
+      .card-padding { padding: 20px !important; }
+      .headline { font-size: 20px !important; }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body { background-color: #09090b !important; }
+      .email-bg { background-color: #0f0f10 !important; border-color: #1c1c1f !important; }
+      .card { background-color: #1c1c1f !important; border-color: #2e2e32 !important; }
+      .text-main { color: #ffffff !important; }
+      .text-muted { color: #9f9fa8 !important; }
+      .otp-box {
+        background-color: #27272a !important;
+        border-color: #3a3a3e !important;
+        color: #c4b5fd !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center">
+        <table class="container" width="680" cellpadding="0" cellspacing="0" style="max-width:680px; width:100%;">
+          <tr>
+            <td style="padding:40px 16px;">
+              <!-- Outer Card -->
+              <table width="100%" cellpadding="0" cellspacing="0" class="email-bg"  style="background:#ffffff; border:1px solid #e5e5e5; border-radius:14px;">
+                <!-- Logo -->
+                <tr>
+                  <td align="center" style="padding:28px 0;">
+                    <table role="presentation">
+                      <tr>
+                        <td width="28" height="28" style="background:linear-gradient(135deg,#7c6af7,#a78bfa); border-radius:6px;"></td>
+                        <td width="8"></td>
+                        <td class="text-main" style="font-size:18px; font-weight:bold; font-family:Arial; color:#111;">
+                          {{appName}}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Content -->
+                <tr>
+                  <td class="card-padding" style="padding:32px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" class="card"  style="background:#ffffff; border:1px solid #e5e5e5; border-radius:16px;">
+                      <tr>
+                        <td style="padding:28px;">
+
+                          <!-- Label -->
+                          <div class="text-muted" style="font-size:11px; letter-spacing:1.5px; font-weight:bold; color:#6b7280;">
+                            EMAIL VERIFICATION
+                          </div>
+
+                          <!-- Heading -->
+                          <div class="headline text-main" style="font-size:24px; font-weight:bold; margin-top:8px; color:#111;">
+                            Verify your email address
+                          </div>
+
+                          <!-- Description -->
+                          <div class="text-muted" style="font-size:14px; line-height:1.6; margin-top:12px; color:#555;">
+                            Hi <strong>{{userName}}</strong>,<br><br>
+                            Thanks for signing up! Please verify your email address using the OTP below.
+                          </div>
+
+                          <!-- OTP -->
+                          <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-top:24px;">
+                            <tr>
+                              <td align="center">
+                                <div class="otp-box" style="display:inline-block; padding:16px 32px; border:2px dashed #7c6af7; border-radius:12px; font-size:32px; font-weight:bold; letter-spacing:8px; color:#4f46e5; background:#f9fafb;">
+                                  {{otp}}
+                                </div>
+                              </td>
+                            </tr>
+                          </table>
+
+                          <!-- Expiry -->
+                          <div class="text-muted" style="margin-top:16px; font-size:13px; text-align:center; color:#6b7280;">
+                            Expires in <strong>{{expiryMinutes}} minutes</strong>
+                          </div>
+
+                          <!-- CTA BUTTON -->
+                          <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-top:24px;">
+                            <tr>
+                              <td align="center">
+                                <a href="{{verificationLink}}" style="background:linear-gradient(135deg,#6d5cf0,#9d87fa); color:#ffffff; text-decoration:none; padding:12px 24px; border-radius:10px; font-weight:bold; display:inline-block;">
+                                  Verify Email →
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+
+                          <!-- Fallback Link -->
+                          <div align="center" class="text-muted" style="margin-top:16px; font-size:12px; color:#666;">
+                            Button not working? Paste this link into your browser:<br>
+                            <a href="{{verificationLink}}" style="color:#7c6af7;">
+                              {{verificationLink}}
+                            </a>
+                          </div>
+
+                          <!-- Footer Text -->
+                          <div align="center" class="text-muted" style="margin-top:20px; font-size:12px; color:#666;">
+                            If you didn’t create an account, you can safely ignore this email.
+                          </div>
+
+                          <!-- Bottom Footer -->
+                          <div class="text-muted" style="margin-top:24px; font-size:11px; text-align:center; color:#888;">
+                            © {{year}} {{appName}} <a href="{{privacyPolicy}}">Privacy Policy</a>
+                          </div>
+
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
 }

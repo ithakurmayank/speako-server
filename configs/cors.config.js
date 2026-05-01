@@ -8,7 +8,12 @@ const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    const isExactMatch = allowedOrigins.includes(origin);
+
+    // TODO : Remove this when deploying
+    const isLovablePreview = origin.endsWith(".lovable.app");
+
+    if (isExactMatch || isLovablePreview) {
       callback(null, true);
     } else {
       callback(

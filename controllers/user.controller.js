@@ -37,16 +37,33 @@ const getUserProfile = TryCatch(async (req, res, next) => {
 
 const updateProfile = TryCatch(async (req, res, next) => {
   const updatedDetails = req.body;
-  const result = await userService.updateProfile(req.userId, updatedDetails);
+  await userService.updateProfile(req.userId, updatedDetails);
 
-  sendResponse(res, 200, null, "Profile updated successfully.", result);
+  sendResponse(res, 200, null, "Profile updated successfully.");
 });
 
 const updateUserAvatar = TryCatch(async (req, res, next) => {
   const avatar = req.file;
-  const result = await userService.updateUserAvatar(req.userId, avatar);
+  await userService.updateUserAvatar(req.userId, avatar);
 
-  sendResponse(res, 200, null, "User icon updated.", result);
+  sendResponse(res, 200, null, "User icon updated.");
+});
+
+const changePassword = TryCatch(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  await authService.changePassword({
+    userId: req.userId,
+    currentPassword,
+    newPassword,
+  });
+
+  return sendResponse(
+    res,
+    200,
+    null,
+    "Password reset successfully. Please log in with your new password.",
+  );
 });
 
 export {
@@ -55,4 +72,5 @@ export {
   getUserProfile,
   updateProfile,
   updateUserAvatar,
+  changePassword,
 };

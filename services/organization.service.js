@@ -31,7 +31,7 @@ const getOrganization = async ({ orgId, userId }) => {
   if (!isMember) {
     throw new ErrorHandler(
       "Organization not found.",
-      EXCEPTION_CODES.NOT_FOUND,
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
 
@@ -43,7 +43,7 @@ const getOrganization = async ({ orgId, userId }) => {
   if (!org) {
     throw new ErrorHandler(
       "Organization not found.",
-      EXCEPTION_CODES.NOT_FOUND,
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
 
@@ -92,7 +92,7 @@ const getOrganizationAllMembers = async ({ orgId, userId, query }) => {
   if (!isMember) {
     throw new ErrorHandler(
       "Organization not found.",
-      EXCEPTION_CODES.NOT_FOUND,
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
 
@@ -169,7 +169,7 @@ const getOrganizationMember = async ({ orgId, membershipId, userId }) => {
   if (!isMember) {
     throw new ErrorHandler(
       "Organization not found.",
-      EXCEPTION_CODES.NOT_FOUND,
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
 
@@ -187,7 +187,7 @@ const getOrganizationMember = async ({ orgId, membershipId, userId }) => {
   if (!membership) {
     throw new ErrorHandler(
       "Organization membership not found.",
-      EXCEPTION_CODES.NOT_FOUND,
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
 
@@ -260,7 +260,6 @@ const transferOrganizationOwnership = async ({
   membershipId,
   userId,
 }) => {
-  console.log("orgId", orgId, userId);
   const orgOwnerMembership = await Membership.findOne({
     userId,
     orgId,
@@ -270,7 +269,7 @@ const transferOrganizationOwnership = async ({
   if (!orgOwnerMembership) {
     throw new ErrorHandler(
       "Organization membership not found.",
-      EXCEPTION_CODES.NOT_FOUND,
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
 
@@ -297,7 +296,7 @@ const transferOrganizationOwnership = async ({
   if (!targetMembership) {
     throw new ErrorHandler(
       "Organization membership not found.",
-      EXCEPTION_CODES.NOT_FOUND,
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
 
@@ -344,7 +343,7 @@ const leaveOrganization = async ({ orgId, userId }) => {
   if (!membership) {
     throw new ErrorHandler(
       "Organization membership not found.",
-      EXCEPTION_CODES.NOT_FOUND,
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
 
@@ -369,7 +368,7 @@ const removeOrganizationMember = async ({ orgId, membershipId, userId }) => {
   if (!membership) {
     throw new ErrorHandler(
       "Organization membership not found.",
-      EXCEPTION_CODES.NOT_FOUND,
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
 
@@ -443,6 +442,29 @@ const createOrganization = async ({ userId, name, slug }) => {
   } finally {
     session.endSession();
   }
+};
+
+const cancelOrganizationInvite = async ({ orgId, inviteId }) => {
+  const invite = await Invitation.findOne({
+    _id: inviteId,
+    orgId: orgId,
+  });
+
+  if (!invite) {
+    throw new ErrorHandler(
+      "Invite not found",
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
+    );
+  }
+
+  if (invite.isUsed || invite.expiresAt <= new Date()) {
+    throw new ErrorHandler(
+      "Invite already used or invalid",
+      EXCEPTION_CODES.BAD_REQUEST,
+    );
+  }
+
+  await Invitation.deleteOne({ _id: inviteId });
 };
 
 const updateOrganization = async ({ orgId, name }) => {
@@ -556,8 +578,6 @@ const createOrgInvitation = async ({ orgId, role, email, createdBy }) => {
     },
     createdBy,
   );
-
-  return { token };
 };
 
 const addMemberToOrganization = async ({
@@ -605,7 +625,10 @@ const updateOrganizationMemberRole = async ({ orgId, membershipId, role }) => {
   );
 
   if (!updatedMembership) {
-    throw new ErrorHandler("Membership not found.", EXCEPTION_CODES.NOT_FOUND);
+    throw new ErrorHandler(
+      "Membership not found.",
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
+    );
   }
 };
 
@@ -618,6 +641,7 @@ export const orgService = {
   getOrganizationMember,
   getOrganizationPendingInvites,
   createOrganization,
+  cancelOrganizationInvite,
   updateOrganization,
   updateOrganizationIcon,
   createOrgInvitation,

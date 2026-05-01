@@ -17,8 +17,8 @@ async function hashOtp(otp) {
   return bcrypt.hash(otp, 10);
 }
 
-async function verifyOtpHash(rawOtp, storedHash) {
-  return bcrypt.compare(rawOtp, storedHash);
+async function verifyRawOtpWithOtpHash(rawOtp, storedHash) {
+  return await bcrypt.compare(rawOtp, storedHash);
 }
 
-export { generateOtp, hashOtp, verifyOtpHash };
+export { generateOtp, hashOtp, verifyRawOtpWithOtpHash };

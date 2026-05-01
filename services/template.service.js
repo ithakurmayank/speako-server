@@ -12,7 +12,7 @@ const renderTemplate = async (name, templateType, variables) => {
   if (!template) {
     throw new ErrorHandler(
       `Template not found: ${name}`,
-      EXCEPTION_CODES.NOT_FOUND,
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
 

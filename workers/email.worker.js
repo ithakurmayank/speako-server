@@ -54,6 +54,7 @@ const processOutbox = async () => {
 
 const startEmailWorker = () => {
   processOutbox();
+  console.log("Email worker started");
   setInterval(processOutbox, POLL_INTERVAL_MS);
 };
 

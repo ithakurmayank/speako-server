@@ -20,11 +20,16 @@ import { Membership } from "#models/membership.model.js";
 import { UserStatus } from "#models/userStatus.model.js";
 import { Organization } from "#models/organization.model.js";
 import {
+  OTP_MAX_FAILED_ATTEMPTS,
   OTP_PURPOSES,
   OTP_RESEND_COOLDOWN_SECONDS,
   OTP_TTL_MINUTES,
 } from "#constants/common.constants.js";
-import { generateOtp, hashOtp, verifyOtpHash } from "#utils/otp.util.js";
+import {
+  generateOtp,
+  hashOtp,
+  verifyRawOtpWithOtpHash,
+} from "#utils/otp.util.js";
 import { OtpVerification } from "#models/otpVerification.model.js";
 import { outboxService } from "./outbox.service.js";
 import {
@@ -32,7 +37,9 @@ import {
   TEMPLATE_TYPES,
 } from "#models/notificationTemplate.model.js";
 import env from "../configs/env.config.js";
+import { userService } from "./user.service.js";
 
+//#region UPDATE services
 const loginUser = async ({ identifier, password, deviceInfo }) => {
   let query;
 
@@ -77,12 +84,6 @@ const loginUser = async ({ identifier, password, deviceInfo }) => {
   return {
     accessToken,
     refreshToken: rawRefreshToken,
-    user: {
-      _id: user._id,
-      name: user.name,
-      username: user.username,
-      email: user.email,
-    },
   };
 };
 
@@ -105,6 +106,8 @@ const register = async (userDetails, deviceInfo) => {
       deviceInfo,
       session,
     );
+
+    generateOtpAndQueueEmailAfterRegister(user);
 
     await session.commitTransaction();
 
@@ -135,7 +138,7 @@ const registerWithInvite = async (userDetails, deviceInfo) => {
   if (!invitation) {
     throw new ErrorHandler(
       "Invite link is invalid or has expired.",
-      EXCEPTION_CODES.NOT_FOUND,
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
 
@@ -184,6 +187,7 @@ const registerWithInvite = async (userDetails, deviceInfo) => {
       session,
     );
 
+    generateOtpAndQueueEmailAfterRegister(user);
     await session.commitTransaction();
 
     return {
@@ -280,49 +284,12 @@ const forgotPassword = async (email, ipAddress) => {
 
   if (!user) return;
 
-  const now = new Date();
-  const latestOtp = await OtpVerification.findOne({
+  const rawOtp = await generateAndSaveOtp({
     userId: user._id,
     purpose: OTP_PURPOSES.PasswordReset,
-    isUsed: false,
-    expiresAt: { $gt: now },
-  }).sort({ createdAt: -1 });
-
-  if (latestOtp) {
-    const cooldownEndsAt =
-      latestOtp.createdAt.getTime() + OTP_RESEND_COOLDOWN_SECONDS * 1000;
-
-    const secondsRemaining = Math.ceil((cooldownEndsAt - Date.now()) / 1000);
-
-    if (secondsRemaining > 0) {
-      throw new ErrorHandler(
-        `Please wait ${secondsRemaining} second${secondsRemaining === 1 ? "" : "s"} before requesting a new OTP.`,
-        EXCEPTION_CODES.TOO_MANY_REQUESTS,
-      );
-    }
-  }
-
-  // Invalidate all previous unused OTPs
-  await OtpVerification.updateMany(
-    {
-      userId: user._id,
-      purpose: OTP_PURPOSES.PasswordReset,
-      isUsed: false,
-    },
-    { $set: { isUsed: true, usedAt: new Date() } },
-  );
-
-  const rawOtp = generateOtp();
-  const otpHash = await hashOtp(rawOtp);
-  const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
-
-  await OtpVerification.create({
-    userId: user._id,
-    otpHash,
-    purpose: OTP_PURPOSES.PasswordReset,
-    expiresAt,
-    ipAddress,
   });
+
+  if (!rawOtp) return;
 
   await outboxService.queueEmail(
     {
@@ -370,8 +337,19 @@ const resetPassword = async (email, otp, newPassword) => {
     throw genericError;
   }
 
-  const isMatch = await verifyOtpHash(otp, otpDoc.otpHash);
+  const isMatch = await verifyRawOtpWithOtpHash(otp, otpDoc.otpHash);
+
   if (!isMatch) {
+    otpDoc.failedAttempts += 1;
+
+    if (otpDoc.failedAttempts >= OTP_MAX_FAILED_ATTEMPTS) {
+      otpDoc.isUsed = true;
+      otpDoc.usedAt = new Date();
+      await otpDoc.save();
+      throw genericError;
+    }
+
+    await otpDoc.save();
     throw genericError;
   }
 
@@ -391,12 +369,67 @@ const resetPassword = async (email, otp, newPassword) => {
   user.passwordHash = newPassword;
   await user.save();
 
-  // revoke all refresh tokens — force re-login on all devices
-  await RefreshToken.updateMany(
-    { userId: user._id, isRevoked: false },
-    { $set: { isRevoked: true, revokedAt: new Date() } },
-  );
+  await revokeAllActiveSessions(user._id);
 };
+
+const verifyUserEmail = async ({ userId, otp }) => {
+  const user = await userService.getUserWithLean(userId);
+
+  if (user.isEmailVerified) {
+    throw new ErrorHandler(
+      "Email is already verified.",
+      EXCEPTION_CODES.INVALID_INPUT,
+    );
+  }
+
+  const otpDoc = await OtpVerification.findOne({
+    userId,
+    purpose: OTP_PURPOSES.EmailVerification,
+    isUsed: false,
+    expiresAt: { $gt: new Date() },
+  }).sort({ createdAt: -1 });
+
+  const genericError = new ErrorHandler(
+    "Invalid or expired OTP.",
+    EXCEPTION_CODES.INVALID_INPUT,
+  );
+
+  if (!otpDoc) throw genericError;
+
+  const isMatch = await verifyRawOtpWithOtpHash(otp, otpDoc.otpHash);
+
+  if (!isMatch) {
+    otpDoc.failedAttempts += 1;
+
+    if (otpDoc.failedAttempts >= OTP_MAX_FAILED_ATTEMPTS) {
+      otpDoc.isUsed = true;
+      otpDoc.usedAt = new Date();
+      await otpDoc.save();
+      throw genericError;
+    }
+
+    await otpDoc.save();
+    throw genericError;
+  }
+
+  otpDoc.isUsed = true;
+  otpDoc.usedAt = new Date();
+
+  await Promise.all([
+    otpDoc.save(),
+    User.updateOne({ _id: userId }, { $set: { isEmailVerified: true } }),
+  ]);
+};
+
+const resendVerificationOtp = async ({ userId }) => {
+  const user = await userService.getUserWithLean(userId);
+  // Silent return — don't reveal whether email is already verified
+  if (user.isEmailVerified) return;
+
+  generateOtpAndQueueEmailAfterRegister(user);
+};
+
+//#endregion
 
 export const authService = {
   loginUser,
@@ -406,6 +439,8 @@ export const authService = {
   logoutUser,
   forgotPassword,
   resetPassword,
+  verifyUserEmail,
+  resendVerificationOtp,
 };
 
 //#region Internal Helpers
@@ -462,6 +497,80 @@ async function createTokens(userId, deviceInfo, session) {
   );
 
   return { accessToken, refreshToken: rawRefreshToken };
+}
+
+async function generateAndSaveOtp({ userId, purpose, ipAddress = null }) {
+  const latestOtp = await OtpVerification.findOne({
+    userId,
+    purpose,
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  if (latestOtp) {
+    const cooldownEndsAt = new Date(
+      latestOtp.createdAt.getTime() + OTP_RESEND_COOLDOWN_SECONDS * 1000,
+    );
+    if (new Date() < cooldownEndsAt) {
+      return null;
+    }
+  }
+
+  // Invalidate all previous unused OTPs for given purpose
+  await OtpVerification.updateMany(
+    { userId, purpose, isUsed: false },
+    { $set: { isUsed: true, usedAt: new Date() } },
+  );
+
+  const rawOtp = generateOtp();
+  const otpHash = await hashOtp(rawOtp);
+  const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+
+  await OtpVerification.create({
+    userId,
+    purpose,
+    otpHash,
+    ipAddress,
+    expiresAt,
+  });
+
+  return rawOtp;
+}
+
+async function generateOtpAndQueueEmailAfterRegister(user) {
+  const rawOtp = await generateAndSaveOtp({
+    userId: user._id,
+    purpose: OTP_PURPOSES.EmailVerification,
+  });
+
+  // Silent return — rate limit hit inside generateAndSaveOtp
+  if (!rawOtp) return;
+
+  await outboxService.queueEmail(
+    {
+      to: "mt3197356@gmail.com", //delete/remove this when hosting,
+      // to: user.email,
+      templateName: NOTIFICATION_TEMPLATE_NAMES.USER_EMAIL_VERIFICATION_EMAIL,
+      variables: {
+        appName: env.APP_NAME,
+        userName: user.name,
+        otp: rawOtp,
+        expiryMinutes: String(OTP_TTL_MINUTES),
+        verificationLink: `${env.FRONTEND_URL}/auth/verify-email`,
+        year: dayjs().year(),
+        privacyPolicy: `${env.FRONTEND_URL}/privacy`,
+      },
+    },
+    user._id,
+  );
+}
+
+// revoke all refresh tokens — force re-login on all devices
+async function revokeAllActiveSessions(userId) {
+  await RefreshToken.updateMany(
+    { userId, isRevoked: false },
+    { isRevoked: true, revokedAt: new Date() },
+  );
 }
 
 function formatUser(user) {

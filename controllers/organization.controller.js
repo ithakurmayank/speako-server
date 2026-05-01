@@ -72,6 +72,16 @@ const createOrganization = TryCatch(async (req, res, next) => {
   );
 });
 
+const cancelOrganizationInvite = TryCatch(async (req, res, next) => {
+  const { orgId, inviteId } = req.params;
+  await orgService.cancelOrganizationInvite({
+    inviteId,
+    orgId,
+  });
+
+  return sendResponse(res, 200, null, "Invitation deleted successfully.");
+});
+
 const updateOrganization = TryCatch(async (req, res, next) => {
   const { name } = req.body;
   const { orgId } = req.context;
@@ -97,7 +107,7 @@ const updateOrganizationIcon = TryCatch(async (req, res, next) => {
 const createOrgInvitation = TryCatch(async (req, res, next) => {
   const { orgId } = req.context;
   const { role, email } = req.body;
-  const { token } = await orgService.createOrgInvitation({
+  await orgService.createOrgInvitation({
     orgId,
     role,
     email,
@@ -109,19 +119,16 @@ const createOrgInvitation = TryCatch(async (req, res, next) => {
     200,
     null,
     "Invitation sent successfully through email.",
-    {
-      token,
-    },
   );
 });
 
 const addMemberToOrganization = TryCatch(async (req, res, next) => {
   const { orgId } = req.context;
-  const { invitedUserId, role } = req.body;
+  const { userId, role } = req.body;
   await orgService.addMemberToOrganization({
     orgId,
     invitedByUserId: req.userId,
-    invitedUserId,
+    invitedUserId: userId,
     role,
   });
 
@@ -131,10 +138,9 @@ const addMemberToOrganization = TryCatch(async (req, res, next) => {
 const updateOrganizationMemberRole = TryCatch(async (req, res, next) => {
   const { orgId } = req.context;
   const { membershipId } = req.params;
-  const { role, userId } = req.body;
+  const { role } = req.body;
   await orgService.updateOrganizationMemberRole({
     orgId,
-    userId,
     role,
     membershipId,
   });
@@ -143,8 +149,7 @@ const updateOrganizationMemberRole = TryCatch(async (req, res, next) => {
 });
 
 const transferOrganizationOwnership = TryCatch(async (req, res, next) => {
-  const { orgId } = req.params;
-  const { membershipId } = req.params;
+  const { orgId, membershipId } = req.params;
   await orgService.transferOrganizationOwnership({
     orgId,
     userId: req.userId,
@@ -188,6 +193,7 @@ export {
   updateOrganization,
   updateOrganizationIcon,
   createOrgInvitation,
+  cancelOrganizationInvite,
   addMemberToOrganization,
   updateOrganizationMemberRole,
   transferOrganizationOwnership,

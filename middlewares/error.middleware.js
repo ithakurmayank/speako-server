@@ -26,7 +26,7 @@ const globalErrorMiddleware = (err, req, res, next) => {
       case "LIMIT_FILE_COUNT":
       case "LIMIT_UNEXPECTED_FILE":
         error = new ErrorHandler(
-          "Invalid file upload.",
+          "Check your field names or file count limits.",
           EXCEPTION_CODES.FILE_UPLOAD_FAILED,
         );
         break;

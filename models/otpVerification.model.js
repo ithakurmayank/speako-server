@@ -15,6 +15,8 @@ const otpVerificationSchema = new Schema(
       required: true,
     },
 
+    failedAttempts: { type: Number, default: 0 },
+
     expiresAt: { type: Date, required: true },
 
     isUsed: { type: Boolean, default: false },
@@ -28,7 +30,7 @@ const otpVerificationSchema = new Schema(
 );
 
 otpVerificationSchema.index(
-  { userId: 1, purpose: 1 },
+  { userId: 1, purpose: 1, expiresAt: 1 },
   { partialFilterExpression: { isUsed: false } },
 );
 

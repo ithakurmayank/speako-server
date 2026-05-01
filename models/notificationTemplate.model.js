@@ -11,6 +11,7 @@ const NOTIFICATION_TEMPLATE_NAMES = {
   ORG_INVITATION_EMAIL: "Organization Invite - Email",
   ORG_INVITATION_SMS: "Organization Invite - Sms",
   PASSWORD_RESET_OTP_EMAIL: "Password Reset - Email",
+  USER_EMAIL_VERIFICATION_EMAIL: "User Email Verfication - Email",
 };
 
 const notificationTemplateSchema = new Schema(

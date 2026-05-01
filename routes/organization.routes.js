@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   addMemberToOrganization,
+  cancelOrganizationInvite,
   createOrganization,
   createOrgInvitation,
   getMyOrganizations,
@@ -73,10 +74,16 @@ router.put(
 );
 
 router.post(
-  "/:orgId/invite",
+  "/:orgId/invites",
   authorize(PERMISSIONS.ORG_MEMBERS_INVITE),
   validate(createOrgInvitationSchema),
   createOrgInvitation,
+);
+
+router.delete(
+  "/:orgId/invites/:inviteId",
+  authorize(PERMISSIONS.ORG_INVITES_MANAGE),
+  cancelOrganizationInvite,
 );
 
 router.post(
@@ -105,6 +112,9 @@ router.delete(
   authorize(PERMISSIONS.ORG_MEMBERS_REMOVE),
   removeOrganizationMember,
 );
+
+// TODO: Implement removeOrganizationIcon controller and route
+// router.delete("/:orgId/icon", authorize(PERMISSIONS.ORG_SETTINGS_EDIT), removeOrganizationIcon)
 
 //#endregion
 

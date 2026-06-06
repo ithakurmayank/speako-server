@@ -7,6 +7,13 @@ import {
   REFRESH_TOKEN_EXPIRY_SECONDS,
 } from "../constants/token.constants.js";
 
+const baseCookieOptions = {
+  httpOnly: true,
+  // secure: env.ENVIRONMENT === "production",
+  secure: true,
+  sameSite: env.ENVIRONMENT === "production" ? "strict" : "none",
+};
+
 const generateAccessToken = (userId) => {
   return jwt.sign({ sub: userId.toString() }, env.JWT_SECRET_KEY, {
     expiresIn: ACCESS_TOKEN_EXPIRY_SECONDS,
@@ -31,12 +38,6 @@ const hashToken = (rawToken) => {
 };
 
 const setTokenCookies = (res, { accessToken, refreshToken }) => {
-  const baseCookieOptions = {
-    httpOnly: true,
-    secure: env.ENVIRONMENT === "production",
-    sameSite: "strict",
-  };
-
   res.cookie("accessToken", accessToken, {
     ...baseCookieOptions,
     maxAge: ACCESS_TOKEN_EXPIRY_SECONDS * 1000,
@@ -50,8 +51,11 @@ const setTokenCookies = (res, { accessToken, refreshToken }) => {
 };
 
 const clearTokenCookies = (res) => {
-  res.clearCookie("accessToken");
-  res.clearCookie("refreshToken", { path: "/api/v1/auth" });
+  res.clearCookie("accessToken", baseCookieOptions);
+  res.clearCookie("refreshToken", {
+    path: "/api/v1/auth",
+    ...baseCookieOptions,
+  });
 };
 
 // truncate UA as Real User-Agent strings are typically < 200–300 chars, no need to pass full UA to ua-parser-js

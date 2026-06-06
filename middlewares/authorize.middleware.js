@@ -22,7 +22,7 @@ const authorize = (permission) => {
       if (!allowed) {
         throw new ErrorHandler(
           "You do not have permission to perform this action.",
-          EXCEPTION_CODES.FORBIDDEN,
+          EXCEPTION_CODES.INSUFFICIENT_PERMISSIONS,
         );
       }
 

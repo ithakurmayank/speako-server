@@ -3,6 +3,7 @@ import {
   getMyDetails,
   getMyProfile,
   getUserProfile,
+  removeMyAvatar,
   updateProfile,
   updateUserAvatar,
 } from "#controllers/user.controller.js";
@@ -34,5 +35,7 @@ router.post(
   validate(changePasswordSchema),
   changePassword,
 );
+
+router.delete("/me/avatar", removeMyAvatar);
 
 export default router;

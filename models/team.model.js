@@ -18,6 +18,7 @@ const teamSchema = new Schema(
     isPrivate: { type: Boolean, default: false },
     isArchived: { type: Boolean, default: false },
     archivedAt: { type: Date, default: null },
+    isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
     deletedBy: { type: ObjectId, ref: "User", default: null },
   },

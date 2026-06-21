@@ -10,6 +10,7 @@ import {
   getOrganizationMember,
   getOrganizationPendingInvites,
   leaveOrganization,
+  removeOrganizationIcon,
   removeOrganizationMember,
   transferOrganizationOwnership,
   updateOrganization,
@@ -30,6 +31,7 @@ import { authorize } from "#middlewares/authorize.middleware.js";
 import { PERMISSIONS } from "#constants/permissions.constants.js";
 import { authenticate } from "#middlewares/authenticate.middleware.js";
 import { iconUploadMiddleware } from "#middlewares/multer.middleware.js";
+import teamRoute from "./team.routes.js";
 
 const router = Router({ mergeParams: true });
 
@@ -112,9 +114,16 @@ router.delete(
   authorize(PERMISSIONS.ORG_MEMBERS_REMOVE),
   removeOrganizationMember,
 );
+router.put("/:orgId/leave", leaveOrganization);
 
-// TODO: Implement removeOrganizationIcon controller and route
-// router.delete("/:orgId/icon", authorize(PERMISSIONS.ORG_SETTINGS_EDIT), removeOrganizationIcon)
+router.delete(
+  "/:orgId/icon",
+  authorize(PERMISSIONS.ORG_SETTINGS_EDIT),
+  removeOrganizationIcon,
+);
+
+//Team Routes
+router.use("/:orgId/teams", teamRoute);
 
 //#endregion
 

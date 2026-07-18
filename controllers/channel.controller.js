@@ -13,7 +13,7 @@ const getChannel = TryCatch(async (req, res) => {
     userId: req.userId,
   });
 
-  return sendResponse(res, 200, result, "Channel fetched successfully.");
+  return sendResponse(res, 200, null, "Channel fetched successfully.", result);
 });
 
 const getChannels = TryCatch(async (req, res) => {
@@ -26,7 +26,26 @@ const getChannels = TryCatch(async (req, res) => {
     query: req.query,
   });
 
-  return sendResponse(res, 200, result, "Channels fetched successfully.");
+  return sendResponse(res, 200, null, "Channels fetched successfully.", result);
+});
+
+const getChannelMembers = TryCatch(async (req, res) => {
+  const { orgId, teamId, channelId } = req.context;
+
+  const result = await channelService.getChannelMembers({
+    orgId,
+    teamId,
+    channelId,
+    userId: req.userId,
+    query: req.query,
+  });
+
+  return sendResponse(
+    res,
+    200,
+    result,
+    "Channel members fetched successfully.",
+  );
 });
 //#endregion
 
@@ -90,6 +109,71 @@ const unarchiveChannel = TryCatch(async (req, res) => {
   return sendResponse(res, 200, null, "Channel unarchived successfully.");
 });
 
+const addChannelMember = TryCatch(async (req, res) => {
+  const { orgId, teamId, channelId } = req.context;
+  const { userId: targetUserId, role } = req.body;
+
+  await channelService.addChannelMember({
+    orgId,
+    teamId,
+    channelId,
+    userId: req.userId,
+    targetUserId,
+    role,
+  });
+
+  return sendResponse(res, 200, null, "Member added to channel successfully.");
+});
+
+const updateChannelMemberRole = TryCatch(async (req, res) => {
+  const { orgId, teamId, channelId } = req.context;
+  const { membershipId } = req.params;
+  const { role } = req.body;
+
+  await channelService.updateChannelMemberRole({
+    orgId,
+    teamId,
+    channelId,
+    membershipId,
+    role,
+  });
+
+  return sendResponse(res, 200, null, "Member role updated successfully.");
+});
+
+const leaveChannel = TryCatch(async (req, res) => {
+  const { orgId, teamId, channelId } = req.context;
+
+  await channelService.leaveChannel({
+    orgId,
+    teamId,
+    channelId,
+    userId: req.userId,
+  });
+
+  return sendResponse(res, 200, null, "Left channel successfully.");
+});
+
+const removeChannelMember = TryCatch(async (req, res) => {
+  const { orgId, teamId, channelId } = req.context;
+  const { membershipId } = req.params;
+
+  await channelService.removeChannelMember({
+    orgId,
+    teamId,
+    channelId,
+    membershipId,
+    userId: req.userId,
+  });
+
+  return sendResponse(
+    res,
+    200,
+    null,
+    "Member removed from channel successfully.",
+  );
+});
+
 //#endregion
 
 export {
@@ -99,4 +183,9 @@ export {
   archiveChannel,
   unarchiveChannel,
   getChannels,
+  addChannelMember,
+  updateChannelMemberRole,
+  leaveChannel,
+  removeChannelMember,
+  getChannelMembers,
 };

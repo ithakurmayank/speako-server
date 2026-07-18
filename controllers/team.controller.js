@@ -18,7 +18,7 @@ const getTeams = TryCatch(async (req, res) => {
     pageNumber: parseInt(pageNumber) || 1,
   });
 
-  return sendResponse(res, 200, result, "Teams fetched successfully.");
+  return sendResponse(res, 200, null, "Teams fetched successfully.", result);
 });
 
 const getTeam = TryCatch(async (req, res) => {
@@ -30,7 +30,7 @@ const getTeam = TryCatch(async (req, res) => {
     userId: req.userId,
   });
 
-  return sendResponse(res, 200, result, "Team fetched successfully.");
+  return sendResponse(res, 200, null, "Team fetched successfully.", result);
 });
 
 const getTeamMembers = TryCatch(async (req, res) => {
@@ -43,7 +43,13 @@ const getTeamMembers = TryCatch(async (req, res) => {
     query: req.query,
   });
 
-  return sendResponse(res, 200, result, "Team members fetched successfully.");
+  return sendResponse(
+    res,
+    200,
+    null,
+    "Team members fetched successfully.",
+    result,
+  );
 });
 //#endregion
 

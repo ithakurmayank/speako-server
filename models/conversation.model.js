@@ -1,69 +1,137 @@
-import mongoose, { model, Schema, Types } from "mongoose";
+import mongoose, { Schema, Types, model } from "mongoose";
 import {
   CONVERSATION_TYPES,
   CONVERSATION_TYPES_VALUES,
 } from "../constants/conversation.constants.js";
-import {
-  GROUP_ROLES,
-  GROUP_ROLES_VALUES,
-} from "../constants/roles.constants.js";
 
 const { ObjectId } = Types;
 
-const participantSchema = new Schema(
-  {
-    userId: { type: ObjectId, ref: "User", required: true },
-    role: {
-      type: String,
-      enum: GROUP_ROLES_VALUES,
-      default: GROUP_ROLES.GroupMember,
-    },
-    joinedAt: { type: Date, default: Date.now },
-    addedBy: { type: ObjectId, ref: "User", default: null },
-    hasLeft: { type: Boolean, default: false },
-    leftAt: { type: Date, default: null },
-  },
-  { _id: false },
-);
-
 const conversationSchema = new Schema(
   {
-    type: { type: String, enum: CONVERSATION_TYPES_VALUES, required: true },
-
-    // Group chat only:
-    name: { type: String, default: null, trim: true, maxlength: 128 },
-    icon: {
-      url: { type: String, default: null },
-      publicId: { type: String, default: null },
-    },
-    createdBy: { type: ObjectId, ref: "User", default: null },
-    updatedBy: { type: ObjectId, ref: "User" },
-    isDeleted: { type: Boolean, default: false },
-    deletedAt: { type: Date, default: null },
-    deletedBy: { type: ObjectId, ref: "User", default: null },
-
-    participants: {
-      type: [participantSchema],
+    type: {
+      type: String,
+      enum: CONVERSATION_TYPES_VALUES,
       required: true,
-      validate: {
-        validator(arr) {
-          if (this.type === CONVERSATION_TYPES.DIRECT) return arr.length === 2;
-          if (this.type === CONVERSATION_TYPES.GROUP)
-            return arr.length >= 2 && arr.length <= 200;
-          return false;
-        },
-        message: "Direct: exactly 2 participants. Group: 2–200 participants.",
+    },
+
+    // Group only
+    name: {
+      type: String,
+      trim: true,
+      maxlength: 150,
+      default: null,
+    },
+
+    logo: {
+      url: {
+        type: String,
+        default: null,
       },
+      publicId: {
+        type: String,
+        default: null,
+      },
+    },
+
+    // Direct only
+    directParticipantAId: {
+      type: ObjectId,
+      ref: "User",
+      default: null,
+    },
+    directParticipantBId: {
+      type: ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    lastMessageAt: {
+      type: Date,
+      default: null,
+    },
+
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+
+    createdBy: {
+      type: ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    updatedBy: {
+      type: ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    deletedBy: {
+      type: ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    deletedAt: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true },
 );
 
-conversationSchema.index({ "participants.userId": 1 });
+conversationSchema.pre("validate", function (next) {
+  if (this.type === CONVERSATION_TYPES.DIRECT) {
+    if (!this.directParticipantAId || !this.directParticipantBId) {
+      return next(new Error("Direct conversation requires two participants."));
+    }
+
+    if (this.name)
+      return next(new Error("Direct conversation cannot have a name."));
+
+    if (this.logo?.url || this.logo?.publicId)
+      return next(new Error("Direct conversation cannot have a logo."));
+
+    const a = this.directParticipantAId.toString();
+    const b = this.directParticipantBId.toString();
+
+    if (a === b)
+      return next(new Error("Direct participants cannot be the same."));
+
+    if (a > b) {
+      const temp = this.directParticipantAId;
+      this.directParticipantAId = this.directParticipantBId;
+      this.directParticipantBId = temp;
+    }
+  }
+
+  if (this.type === CONVERSATION_TYPES.GROUP) {
+    if (!this.name?.trim()) return next(new Error("Group must have a name."));
+
+    this.directParticipantAId = null;
+    this.directParticipantBId = null;
+  }
+
+  next();
+});
+
 conversationSchema.index(
-  { _id: 1, "participants.userId": 1 },
-  { unique: true },
+  {
+    directParticipantAId: 1,
+    directParticipantBId: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      type: CONVERSATION_TYPES.DIRECT,
+    },
+  },
 );
+
+conversationSchema.index({
+  lastMessageAt: -1,
+});
 
 export const Conversation =
   mongoose.models.Conversation || model("Conversation", conversationSchema);

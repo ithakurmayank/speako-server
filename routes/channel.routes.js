@@ -19,7 +19,7 @@ import {
   updateChannelMemberRoleSchema,
   updateChannelSchema,
 } from "#validators/channel.validators.js";
-// import channelMessageRoute from "./channelMessage.routes.js";
+import channelMessageRoute from "./channelMessage.routes.js";
 import { Router } from "express";
 
 const router = Router({ mergeParams: true });
@@ -84,6 +84,6 @@ router.delete(
 //#endregion
 
 //ChannelMessage Routes
-// router.use("/:channelId/messages", channelMessageRoute);
+router.use("/:channelId/messages", channelMessageRoute);
 
 export default router;

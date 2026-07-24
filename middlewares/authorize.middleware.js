@@ -2,6 +2,7 @@ import { EXCEPTION_CODES } from "../constants/exceptionCodes.constants.js";
 import { hasPermission } from "../lib/hasPermission.lib.js";
 import { ErrorHandler } from "../utils/errorHandler.util.js";
 
+//TODO: Optimize the middleware check multiple permissions.
 const authorize = (permission) => {
   return async (req, res, next) => {
     try {

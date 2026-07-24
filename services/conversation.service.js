@@ -198,7 +198,7 @@ const getConversations = async ({ userId, query }) => {
 
 const lookupDirectConversation = async ({ userId, targetUserId }) => {
   // 1. Cannot open a DM with yourself
-  if (userId.toString() === targetUserId.toString()) {
+  if (userId.equals(targetUserId)) {
     throw new ErrorHandler(
       "You cannot open a Direct conversation with yourself.",
       EXCEPTION_CODES.INVALID_INPUT,
@@ -447,7 +447,7 @@ const getParticipants = async ({ conversationId, userId, query }) => {
 //#region UPDATE services
 const createDirectConversation = async ({ userId, targetUserId }) => {
   // 1. Cannot start a DM with yourself
-  if (userId.toString() === targetUserId.toString()) {
+  if (userId.equals(targetUserId)) {
     throw new ErrorHandler(
       "You cannot start a Direct conversation with yourself.",
       EXCEPTION_CODES.INVALID_INPUT,
@@ -882,7 +882,7 @@ const removeGroupConversationLogo = async ({ conversationId, userId }) => {
 
 const addParticipant = async ({ conversationId, userId, targetUserId }) => {
   // 1. Cannot add yourself
-  if (userId.toString() === targetUserId.toString()) {
+  if (userId.equals(targetUserId)) {
     throw new ErrorHandler(
       "You cannot add yourself to the conversation.",
       EXCEPTION_CODES.INVALID_INPUT,
@@ -1184,7 +1184,7 @@ const removeParticipant = async ({ conversationId, participantId, userId }) => {
   }
 
   // 2. Can't remove yourself via this endpoint
-  if (participant.userId.toString() === userId.toString()) {
+  if (participant.userId.equals(userId)) {
     throw new ErrorHandler(
       "Use the leave endpoint to remove yourself.",
       EXCEPTION_CODES.INVALID_INPUT,

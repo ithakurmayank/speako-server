@@ -1,39 +1,19 @@
 import { ORG_ROLES } from "#constants/roles.constants.js";
 import { z } from "zod";
+import {
+  booleanQuery,
+  pageNumber,
+  pageSize,
+  search,
+} from "./common.validators.js";
 
 const getTeamsSchema = z.object({
   query: z.object({
-    search: z.string().trim().optional(),
-
-    isArchived: z
-      .enum(["true", "false"], {
-        message: "isArchived must be 'true' or 'false'.",
-      })
-      .optional(),
-
-    includePrivate: z
-      .enum(["true", "false"], {
-        message: "includePrivate must be 'true' or 'false'.",
-      })
-      .optional(),
-
-    pageSize: z
-      .string()
-      .optional()
-      .transform((val) => (val ? parseInt(val) : 20))
-      .pipe(
-        z
-          .number()
-          .int()
-          .min(1, "pageSize must be at least 1.")
-          .max(100, "pageSize cannot exceed 100."),
-      ),
-
-    pageNumber: z
-      .string()
-      .optional()
-      .transform((val) => (val ? parseInt(val) : 1))
-      .pipe(z.number().int().min(1, "pageNumber must be at least 1.")),
+    search: search(),
+    isArchived: booleanQuery("isArchived"),
+    includePrivate: booleanQuery("includePrivate"),
+    pageSize: pageSize(),
+    pageNumber: pageNumber(),
   }),
 });
 

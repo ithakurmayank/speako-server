@@ -17,7 +17,8 @@
     "#constants/*": "./constants/*",
     "#validators/*": "./validators/*",
     "#middlewares/*": "./middlewares/*",
-    "#lib/*": "./lib/*"
+    "#lib/*": "./lib/*",
+    "#types/*": "./types/*"
   },
   "scripts": {
     "dev": "cross-env NODE_ENV=development nodemon app.js",
@@ -53,6 +54,7 @@
     "@constants": "constants",
     "@validators": "validators",
     "@middlewares": "middlewares",
-    "@lib": "lib"
+    "@lib": "lib",
+    "@types": "types"
   }
 }

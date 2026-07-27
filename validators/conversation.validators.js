@@ -1,24 +1,10 @@
 import { z } from "zod";
+import { idQuery, pageNumber, pageSize } from "./common.validators.js";
 
 const getConversationsSchema = z.object({
   query: z.object({
-    pageSize: z
-      .string()
-      .optional()
-      .transform((val) => (val ? parseInt(val) : 20))
-      .pipe(
-        z
-          .number()
-          .int()
-          .min(1, "pageSize must be at least 1.")
-          .max(100, "pageSize cannot exceed 100."),
-      ),
-
-    pageNumber: z
-      .string()
-      .optional()
-      .transform((val) => (val ? parseInt(val) : 1))
-      .pipe(z.number().int().min(1, "pageNumber must be at least 1.")),
+    pageSize: pageSize(),
+    pageNumber: pageNumber(),
   }),
 });
 
@@ -69,31 +55,14 @@ const updateGroupConversationSchema = z.object({
 
 const getParticipantsSchema = z.object({
   query: z.object({
-    pageSize: z
-      .string()
-      .optional()
-      .transform((val) => (val ? parseInt(val) : 20))
-      .pipe(
-        z
-          .number()
-          .int()
-          .min(1, "pageSize must be at least 1.")
-          .max(100, "pageSize cannot exceed 100."),
-      ),
-
-    pageNumber: z
-      .string()
-      .optional()
-      .transform((val) => (val ? parseInt(val) : 1))
-      .pipe(z.number().int().min(1, "pageNumber must be at least 1.")),
+    pageSize: pageSize(),
+    pageNumber: pageNumber(),
   }),
 });
 
 const addParticipantSchema = z.object({
   body: z.object({
-    userId: z
-      .string({ required_error: "User ID is required." })
-      .min(1, "User ID cannot be empty."),
+    userId: idQuery("User ID"),
   }),
 });
 

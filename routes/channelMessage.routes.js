@@ -20,10 +20,14 @@ import {
 import { Router } from "express";
 
 const router = Router({ mergeParams: true });
-router.use(authenticate);
 
 //#region GET routes
-router.get("/", validate(getChannelMessagesSchema), getChannelMessages);
+router.get(
+  "/",
+  authorize(null),
+  validate(getChannelMessagesSchema),
+  getChannelMessages,
+);
 
 //#endregion
 

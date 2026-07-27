@@ -4,6 +4,7 @@ import {
   archiveChannel,
   createChannel,
   getChannel,
+  getChannelMembers,
   getChannels,
   leaveChannel,
   unarchiveChannel,
@@ -15,6 +16,7 @@ import { validate } from "#middlewares/validator.middleware.js";
 import {
   addChannelMemberSchema,
   createChannelSchema,
+  getChannelMembersSchema,
   getChannelsSchema,
   updateChannelMemberRoleSchema,
   updateChannelSchema,
@@ -25,11 +27,21 @@ import { Router } from "express";
 const router = Router({ mergeParams: true });
 
 //#region GET routes
-router.get("/:channelId", validate(getChannelsSchema), getChannel);
+router.get(
+  "/:channelId",
+  authorize(null),
+  validate(getChannelsSchema),
+  getChannel,
+);
 
-router.get("/", getChannels);
+router.get("/", authorize(null), getChannels);
 
-router.get("/:channelId/members", getChannels);
+router.get(
+  "/:channelId/members",
+  authorize(null),
+  validate(getChannelMembersSchema),
+  getChannelMembers,
+);
 
 //#endregion
 
@@ -74,7 +86,7 @@ router.put(
   updateChannelMemberRole,
 );
 
-router.delete("/:channelId/members/me", leaveChannel);
+router.delete("/:channelId/members/me", authorize(null), leaveChannel);
 
 router.delete(
   "/:channelId/members/:membershipId",

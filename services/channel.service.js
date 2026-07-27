@@ -1,5 +1,6 @@
 import { EXCEPTION_CODES } from "#constants/exceptionCodes.constants.js";
 import { NOTIFICATION_TYPES } from "#constants/notifications.constants.js";
+import { ORG_ROLES } from "#constants/roles.constants.js";
 import { MEMBER_SCOPES } from "#constants/user.constants.js";
 import { Channel } from "#models/channel.model.js";
 import { Membership } from "#models/membership.model.js";
@@ -535,7 +536,7 @@ const createChannel = async ({
       teamId,
       channelId: channel._id,
       scope: MEMBER_SCOPES.CHANNEL,
-      role: CHANNEL_ROLES.ChannelModerator,
+      role: ORG_ROLES.ChannelModerator,
       invitedBy: userId,
       joinedAt: new Date(),
     });
@@ -780,7 +781,7 @@ const addChannelMember = async ({
   channelId,
   userId,
   targetUserId,
-  role = CHANNEL_ROLES.ChannelMember,
+  role = ORG_ROLES.ChannelMember,
 }) => {
   // 1. Fetch channel, team, caller's memberships, target's team membership,
   //    and check if target is already a channel member — all in parallel
@@ -882,7 +883,7 @@ const addChannelMember = async ({
   }
 
   // 7. Only team admins or org admins can assign the ChannelModerator role
-  if (role === CHANNEL_ROLES.ChannelModerator) {
+  if (role === ORG_ROLES.ChannelModerator) {
     const callerIsAdmin =
       callerOrgMembership.role === ORG_ROLES.OrgOwner ||
       callerOrgMembership.role === ORG_ROLES.OrgAdmin ||
@@ -972,7 +973,7 @@ const updateChannelMemberRole = async ({
       teamId,
       orgId,
       scope: MEMBER_SCOPES.CHANNEL,
-      role: CHANNEL_ROLES.ChannelModerator,
+      role: ORG_ROLES.ChannelModerator,
     }),
   ]);
 
@@ -1019,8 +1020,8 @@ const updateChannelMemberRole = async ({
 
   // 6. Prevent removing the last moderator
   if (
-    targetMembership.role === CHANNEL_ROLES.ChannelModerator &&
-    role !== CHANNEL_ROLES.ChannelModerator &&
+    targetMembership.role === ORG_ROLES.ChannelModerator &&
+    role !== ORG_ROLES.ChannelModerator &&
     moderatorCount <= 1
   ) {
     throw new ErrorHandler(
@@ -1062,7 +1063,7 @@ const leaveChannel = async ({ orgId, teamId, channelId, userId }) => {
       teamId,
       orgId,
       scope: MEMBER_SCOPES.CHANNEL,
-      role: CHANNEL_ROLES.ChannelModerator,
+      role: ORG_ROLES.ChannelModerator,
     }),
   ]);
 
@@ -1106,7 +1107,7 @@ const leaveChannel = async ({ orgId, teamId, channelId, userId }) => {
 
   // 5. Prevent last moderator from leaving
   if (
-    callerMembership.role === CHANNEL_ROLES.ChannelModerator &&
+    callerMembership.role === ORG_ROLES.ChannelModerator &&
     moderatorCount <= 1
   ) {
     throw new ErrorHandler(
@@ -1154,7 +1155,7 @@ const removeChannelMember = async ({
       teamId,
       orgId,
       scope: MEMBER_SCOPES.CHANNEL,
-      role: CHANNEL_ROLES.ChannelModerator,
+      role: ORG_ROLES.ChannelModerator,
     }),
   ]);
 
@@ -1206,7 +1207,7 @@ const removeChannelMember = async ({
 
   // 6. Cannot remove the last moderator
   if (
-    targetMembership.role === CHANNEL_ROLES.ChannelModerator &&
+    targetMembership.role === ORG_ROLES.ChannelModerator &&
     moderatorCount <= 1
   ) {
     throw new ErrorHandler(

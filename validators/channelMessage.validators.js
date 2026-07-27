@@ -1,18 +1,9 @@
 import { z } from "zod";
+import { pageSize } from "./common.validators.js";
 
 const getChannelMessagesSchema = z.object({
   query: z.object({
-    pageSize: z
-      .string()
-      .optional()
-      .transform((val) => (val ? parseInt(val) : 50))
-      .pipe(
-        z
-          .number()
-          .int()
-          .min(1, "pageSize must be at least 1.")
-          .max(100, "pageSize cannot exceed 100."),
-      ),
+    pageSize: pageSize(50),
 
     beforeId: z.string().optional(),
 

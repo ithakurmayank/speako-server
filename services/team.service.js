@@ -8,7 +8,10 @@ import { ReadState } from "#models/readState.model.js";
 import { Team } from "#models/team.model.js";
 import { User } from "#models/user.model.js";
 import { ErrorHandler } from "#utils/errorHandler.util.js";
-import { getOffsetPaginationValues } from "#utils/pagination.util.js";
+import {
+  getOffsetPaginationValues,
+  getPaginatedResponse,
+} from "#utils/pagination.util.js";
 import { deleteCloudinaryFile, uploadIcon } from "#lib/cloudinary.lib.js";
 
 //#region GET services
@@ -946,7 +949,7 @@ const executeCascadeRemoval = async ({
     teamId,
     orgId,
     scope: MEMBER_SCOPES.CHANNEL,
-    role: CHANNEL_ROLES.ChannelModerator,
+    role: ORG_ROLES.ChannelModerator,
   }).lean();
 
   // Only run sole-mod resolution if user is a moderator in at least one channel
@@ -957,7 +960,7 @@ const executeCascadeRemoval = async ({
       channelId: { $in: userModChannelIds },
       userId: { $ne: userId },
       scope: MEMBER_SCOPES.CHANNEL,
-      role: CHANNEL_ROLES.ChannelModerator,
+      role: ORG_ROLES.ChannelModerator,
     });
 
     const channelIdsWithAnotherModSet = new Set(
@@ -981,7 +984,7 @@ const executeCascadeRemoval = async ({
         await Membership.updateOne(
           { _id: nextSeniorMember._id },
           {
-            $set: { role: CHANNEL_ROLES.ChannelModerator, updatedBy: actorId },
+            $set: { role: ORG_ROLES.ChannelModerator, updatedBy: actorId },
           },
         );
       } else {

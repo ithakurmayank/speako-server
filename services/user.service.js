@@ -1,7 +1,7 @@
 import { EXCEPTION_CODES } from "#constants/exceptionCodes.constants.js";
 import { User } from "#models/user.model.js";
 import { ErrorHandler } from "#utils/errorHandler.util.js";
-import { uploadIcon } from "../lib/cloudinary.lib.js";
+import { deleteCloudinaryFile, uploadIcon } from "../lib/cloudinary.lib.js";
 
 //#region GET services
 const getMyDetails = async ({ userId }) => {
@@ -129,6 +129,38 @@ const changePassword = async ({ userId, currentPassword, newPassword }) => {
   await revokeAllActiveSessions(userId);
 };
 
+const removeMyAvatar = async ({ userId }) => {
+  const user = await User.findOne({
+    _id: userId,
+    isDeleted: false,
+  });
+
+  if (!user) {
+    throw new ErrorHandler(
+      "User not found.",
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
+    );
+  }
+
+  if (!user.icon?.publicId) return;
+
+  const oldPublicId = user.icon.publicId;
+
+  user.icon = { url: null, publicId: null };
+  await user.save();
+
+  // Delete from Cloudinary after DB save succeeds
+  // Non-fatal — log and move on if it fails
+  try {
+    await deleteCloudinaryFile(oldPublicId, CLOUDINARY_RESOURCE_TYPES.IMAGE);
+  } catch (err) {
+    console.warn(
+      `Failed to delete user avatar from Cloudinary. PublicId: ${oldPublicId}`,
+      err,
+    );
+  }
+};
+
 //#endregion
 
 export const userService = {
@@ -138,4 +170,5 @@ export const userService = {
   updateProfile,
   updateUserAvatar,
   changePassword,
+  removeMyAvatar,
 };

@@ -181,6 +181,21 @@ const removeOrganizationMember = TryCatch(async (req, res, next) => {
   return sendResponse(res, 200, null, "Member removed successfully.");
 });
 
+const removeOrganizationIcon = TryCatch(async (req, res) => {
+  const { orgId } = req.context;
+
+  await orgService.removeOrganizationIcon({
+    orgId,
+  });
+
+  return sendResponse(
+    res,
+    200,
+    null,
+    "Organization logo removed successfully.",
+  );
+});
+
 //#endregion
 
 export {
@@ -199,4 +214,5 @@ export {
   transferOrganizationOwnership,
   leaveOrganization,
   removeOrganizationMember,
+  removeOrganizationIcon,
 };

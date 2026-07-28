@@ -53,7 +53,7 @@ const messageSchema = new Schema(
     dmDeliveredAt: { type: Date, default: null },
     dmSeenAt: { type: Date, default: null },
 
-    // Group chat delivery state (≤20 participants only):
+    // Group chat delivery state (≤20 participants only). No delivery states are created for channels
     receipts: { type: [receiptSchema], default: [] },
 
     // Edit tracking:

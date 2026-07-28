@@ -66,6 +66,14 @@ const changePassword = TryCatch(async (req, res) => {
   );
 });
 
+const removeMyAvatar = TryCatch(async (req, res) => {
+  await userService.removeMyAvatar({
+    userId: req.userId,
+  });
+
+  return sendResponse(res, 200, null, "User avatar removed successfully.");
+});
+
 export {
   getMyDetails,
   getMyProfile,
@@ -73,4 +81,5 @@ export {
   updateProfile,
   updateUserAvatar,
   changePassword,
+  removeMyAvatar,
 };

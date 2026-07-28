@@ -16,7 +16,8 @@
     "#services/*": "./services/*",
     "#constants/*": "./constants/*",
     "#validators/*": "./validators/*",
-    "#middlewares/*": "./middlewares/*"
+    "#middlewares/*": "./middlewares/*",
+    "#lib/*": "./lib/*"
   },
   "scripts": {
     "dev": "cross-env NODE_ENV=development nodemon app.js",
@@ -48,6 +49,10 @@
     "@models": "models",
     "@routes": "routes",
     "@utils": "utils",
-    "@services": "services"
+    "@services": "services",
+    "@constants": "constants",
+    "@validators": "validators",
+    "@middlewares": "middlewares",
+    "@lib": "lib"
   }
 }

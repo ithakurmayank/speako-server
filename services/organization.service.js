@@ -14,7 +14,7 @@ import { Organization } from "#models/organization.model.js";
 import { Membership } from "#models/membership.model.js";
 import { MEMBER_SCOPES } from "#constants/user.constants.js";
 import mongoose from "mongoose";
-import { uploadIcon } from "../lib/cloudinary.lib.js";
+import { deleteCloudinaryFile, uploadIcon } from "../lib/cloudinary.lib.js";
 import {
   getOffsetPaginationValues,
   getPaginatedResponse,
@@ -632,6 +632,38 @@ const updateOrganizationMemberRole = async ({ orgId, membershipId, role }) => {
   }
 };
 
+const removeOrganizationIcon = async ({ orgId }) => {
+  const org = await Organization.findOne({
+    _id: orgId,
+    isDeleted: false,
+  });
+
+  if (!org) {
+    throw new ErrorHandler(
+      "Organization not found.",
+      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
+    );
+  }
+
+  if (!org.icon?.publicId) return;
+
+  const oldPublicId = org.icon.publicId;
+
+  org.icon = { url: null, publicId: null };
+  await org.save();
+
+  // Delete from Cloudinary after DB save succeeds
+  // Non-fatal — log and move on if it fails
+  try {
+    await deleteCloudinaryFile(oldPublicId, CLOUDINARY_RESOURCE_TYPES.IMAGE);
+  } catch (err) {
+    console.warn(
+      `Failed to delete organization logo from Cloudinary. PublicId: ${oldPublicId}`,
+      err,
+    );
+  }
+};
+
 //#endregion
 
 export const orgService = {
@@ -650,4 +682,5 @@ export const orgService = {
   transferOrganizationOwnership,
   leaveOrganization,
   removeOrganizationMember,
+  removeOrganizationIcon,
 };

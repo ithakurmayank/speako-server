@@ -2,6 +2,7 @@ import mongoose, { model, Schema, Types } from "mongoose";
 
 const { ObjectId } = Types;
 
+//Stores lestReadMessage for a channel/conversation(direct/group)
 const readStateSchema = new Schema(
   {
     userId: { type: ObjectId, ref: "User", required: true },

@@ -6,6 +6,7 @@ import { EXCEPTION_CODES } from "#constants/exceptionCodes.constants.js";
 
 const { ObjectId } = Types;
 
+// NOTE: No membership is created for public channel, they come from team membership
 const membershipSchema = new Schema(
   {
     userId: { type: ObjectId, ref: "User", required: true },
@@ -63,37 +64,56 @@ membershipSchema.index({ channelId: 1, scope: 1 }); // list all members of a cha
 membershipSchema.index({ userId: 1, scope: 1 }); // all teams/orgs a user belongs to (sidebar)
 
 membershipSchema.pre("validate", function () {
-  const ids = [this.orgId, this.teamId, this.channelId];
-  const count = ids.filter((v) => v != null).length;
-
-  if (count !== 1) {
-    throw new ErrorHandler(
-      "Exactly one of orgId, teamId, or channelId must be set",
-      EXCEPTION_CODES.INTERNAL_SERVER_ERROR,
-    );
-  }
-});
-
-membershipSchema.pre("validate", function () {
-  if (this.scope === "org" && !this.orgId) {
-    throw new ErrorHandler(
-      "orgId required when scope is 'org'",
-      EXCEPTION_CODES.INTERNAL_SERVER_ERROR,
-    );
+  // org scope: only orgId set
+  if (this.scope === MEMBER_SCOPES.ORG) {
+    if (!this.orgId)
+      throw new ErrorHandler(
+        "orgId is required when scope is 'org'",
+        EXCEPTION_CODES.INTERNAL_SERVER_ERROR,
+      );
+    if (this.teamId || this.channelId)
+      throw new ErrorHandler(
+        "teamId and channelId must not be set when scope is 'org'",
+        EXCEPTION_CODES.INTERNAL_SERVER_ERROR,
+      );
   }
 
-  if (this.scope === "team" && !this.teamId) {
-    throw new ErrorHandler(
-      "teamId required when scope is 'team'",
-      EXCEPTION_CODES.INTERNAL_SERVER_ERROR,
-    );
+  // team scope: teamId + orgId (denormalized), no channelId
+  if (this.scope === MEMBER_SCOPES.TEAM) {
+    if (!this.teamId)
+      throw new ErrorHandler(
+        "teamId is required when scope is 'team'",
+        EXCEPTION_CODES.INTERNAL_SERVER_ERROR,
+      );
+    if (!this.orgId)
+      throw new ErrorHandler(
+        "orgId is required when scope is 'team' (denormalized)",
+        EXCEPTION_CODES.INTERNAL_SERVER_ERROR,
+      );
+    if (this.channelId)
+      throw new ErrorHandler(
+        "channelId must not be set when scope is 'team'",
+        EXCEPTION_CODES.INTERNAL_SERVER_ERROR,
+      );
   }
 
-  if (this.scope === "channel" && !this.channelId) {
-    throw new ErrorHandler(
-      "channelId required when scope is 'channel'",
-      EXCEPTION_CODES.INTERNAL_SERVER_ERROR,
-    );
+  // channel scope: channelId + teamId + orgId (denormalized), all three required
+  if (this.scope === MEMBER_SCOPES.CHANNEL) {
+    if (!this.channelId)
+      throw new ErrorHandler(
+        "channelId is required when scope is 'channel'",
+        EXCEPTION_CODES.INTERNAL_SERVER_ERROR,
+      );
+    if (!this.teamId)
+      throw new ErrorHandler(
+        "teamId is required when scope is 'channel' (denormalized)",
+        EXCEPTION_CODES.INTERNAL_SERVER_ERROR,
+      );
+    if (!this.orgId)
+      throw new ErrorHandler(
+        "orgId is required when scope is 'channel' (denormalized)",
+        EXCEPTION_CODES.INTERNAL_SERVER_ERROR,
+      );
   }
 });
 

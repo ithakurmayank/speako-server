@@ -1,6 +1,6 @@
 import express from "express";
 import userRoute from "./user.routes.js";
-import chatRoute from "./chat.routes.js";
+import conversationRoute from "./conversation.routes.js";
 import authRoute from "./auth.routes.js";
 import organizationRoute from "./organization.routes.js";
 
@@ -13,6 +13,6 @@ router.get("/", (req, res) => {
 router.use("/auth", authRoute);
 router.use("/orgs", organizationRoute);
 router.use("/user", userRoute);
-// router.use("/chat", chatRoute);
+router.use("/conversations", conversationRoute);
 
 export default router;

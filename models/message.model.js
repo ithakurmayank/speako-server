@@ -27,7 +27,7 @@ const messageSchema = new Schema(
   {
     senderId: { type: ObjectId, ref: "User", required: true },
 
-    clientMessageId: { type: ObjectId, ref: "Message", required: true },
+    clientMessageId: { type: String, required: true },
 
     // Context — exactly ONE set:
     channelId: { type: ObjectId, ref: "Channel", default: null },

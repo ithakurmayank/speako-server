@@ -1,6 +1,9 @@
+import { CHANNEL_TYPES } from "#constants/channel.constants.js";
 import { OUTBOX_MESSAGE_TYPES } from "#constants/common.constants.js";
 import { EXCEPTION_CODES } from "#constants/exceptionCodes.constants.js";
 import { FILE_STATUSES, FILE_TYPES } from "#constants/fileTypes.constants.js";
+import { ORG_ROLES } from "#constants/roles.constants.js";
+import { MEMBER_SCOPES } from "#constants/user.constants.js";
 import { Channel } from "#models/channel.model.js";
 import { File } from "#models/file.model.js";
 import { Membership } from "#models/membership.model.js";
@@ -15,6 +18,7 @@ import {
   getCursorPaginatedResponse,
   getCursorPaginationValues,
 } from "#utils/pagination.util.js";
+import mongoose from "mongoose";
 
 //#region GET services
 const getChannelMessages = async ({
@@ -53,7 +57,7 @@ const getChannelMessages = async ({
   const callerIsAdmin =
     callerOrgMembership.role === ORG_ROLES.OrgOwner ||
     callerOrgMembership.role === ORG_ROLES.OrgAdmin ||
-    callerTeamMembership?.role === TEAM_ROLES.TeamAdmin;
+    callerTeamMembership?.role === ORG_ROLES.TeamAdmin;
 
   // 2. Verify channel exists and caller has access
   const channel = await Channel.findOne({
@@ -188,7 +192,7 @@ const getChannelMessages = async ({
   // nextCursor is the _id of the oldest message on this page
   const nextCursor = hasMore ? messages[messages.length - 1]._id : null;
 
-  return getCursorPaginatedResponse(data, hasMore, nextCursor);
+  return getCursorPaginatedResponse({ data, hasMore, nextCursor });
 };
 //#endregion
 
@@ -252,7 +256,7 @@ const sendChannelMessage = async ({
         teamId,
         orgId,
         scope: MEMBER_SCOPES.CHANNEL,
-        role: CHANNEL_ROLES.ChannelModerator,
+        role: ORG_ROLES.ChannelModerator,
       }),
 
       Membership.exists({
@@ -260,7 +264,7 @@ const sendChannelMessage = async ({
         teamId,
         orgId,
         scope: MEMBER_SCOPES.TEAM,
-        role: TEAM_ROLES.TeamAdmin,
+        role: ORG_ROLES.TeamAdmin,
       }),
 
       Membership.exists({

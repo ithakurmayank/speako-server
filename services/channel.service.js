@@ -14,6 +14,7 @@ import {
   getOffsetPaginationValues,
   getPaginatedResponse,
 } from "#utils/pagination.util.js";
+import mongoose from "mongoose";
 
 //#region GET services
 const getChannel = async ({ orgId, teamId, channelId, userId }) => {
@@ -50,7 +51,7 @@ const getChannel = async ({ orgId, teamId, channelId, userId }) => {
   const callerIsAdmin =
     callerOrgMembership.role === ORG_ROLES.OrgOwner ||
     callerOrgMembership.role === ORG_ROLES.OrgAdmin ||
-    callerTeamMembership?.role === TEAM_ROLES.TeamAdmin;
+    callerTeamMembership?.role === ORG_ROLES.TeamAdmin;
 
   // 2. Fetch the channel
   const channel = await Channel.findOne({
@@ -153,7 +154,7 @@ const getChannels = async ({ orgId, teamId, userId, query }) => {
   const callerIsAdmin =
     callerOrgMembership.role === ORG_ROLES.OrgOwner ||
     callerOrgMembership.role === ORG_ROLES.OrgAdmin ||
-    callerTeamMembership?.role === TEAM_ROLES.TeamAdmin;
+    callerTeamMembership?.role === ORG_ROLES.TeamAdmin;
 
   // 2. Build the filter
   const filter = {
@@ -361,7 +362,7 @@ const getChannelMembers = async ({
   const callerHasElevatedAccess =
     callerOrgMembership.role === ORG_ROLES.OrgOwner ||
     callerOrgMembership.role === ORG_ROLES.OrgAdmin ||
-    callerTeamMembership?.role === TEAM_ROLES.TeamAdmin;
+    callerTeamMembership?.role === ORG_ROLES.TeamAdmin;
 
   // 2. Build membership filter based on channel type
   //    Private: explicit channel memberships
@@ -517,59 +518,87 @@ const createChannel = async ({
     );
   }
 
-  // 3. Create the channel
-  const channel = await Channel.create({
-    orgId,
-    teamId,
-    name: name.trim(),
-    description: description ?? null,
-    type,
-    isPrivate,
-    createdBy: userId,
-  });
+  const session = await mongoose.startSession();
 
-  // 4. Private channel — add creator as ChannelModerator and seed their ReadState
-  if (isPrivate) {
-    await Membership.create({
-      userId,
-      orgId,
-      teamId,
-      channelId: channel._id,
-      scope: MEMBER_SCOPES.CHANNEL,
-      role: ORG_ROLES.ChannelModerator,
-      invitedBy: userId,
-      joinedAt: new Date(),
+  try {
+    await session.withTransaction(async () => {
+      // 3. Create the channel
+      const channel = await Channel.create(
+        [
+          {
+            orgId,
+            teamId,
+            name: name.trim(),
+            description: description ?? null,
+            type,
+            isPrivate,
+            createdBy: userId,
+          },
+        ],
+        { session },
+      );
+
+      const createdChannel = channel[0];
+
+      // 4. Private channel — add creator as ChannelModerator and seed their ReadState
+      if (isPrivate) {
+        await Membership.create(
+          [
+            {
+              userId,
+              orgId,
+              teamId,
+              channelId: createdChannel._id,
+              scope: MEMBER_SCOPES.CHANNEL,
+              role: ORG_ROLES.ChannelModerator,
+              invitedBy: userId,
+              joinedAt: new Date(),
+            },
+          ],
+          { session },
+        );
+
+        await ReadState.create(
+          [
+            {
+              userId,
+              channelId: createdChannel._id,
+              lastReadMessageId: null, // new channel, no messages yet
+              lastReadAt: new Date(),
+              unreadCount: 0,
+              mentionCount: 0,
+            },
+          ],
+          { session },
+        );
+      } else {
+        // 5. Public channel — seed ReadState for all current team members
+        //    so no existing messages appear as unread for anyone
+        const teamMemberIds = await Membership.distinct("userId", {
+          teamId,
+          orgId,
+          scope: MEMBER_SCOPES.TEAM,
+        }).session(session);
+
+        if (teamMemberIds.length > 0) {
+          const readStates = teamMemberIds.map((memberId) => ({
+            userId: memberId,
+            channelId: createdChannel._id,
+            lastReadMessageId: null, // new channel, no messages yet
+            lastReadAt: new Date(),
+            unreadCount: 0,
+            mentionCount: 0,
+          }));
+
+          await ReadState.insertMany(readStates, {
+            ordered: false,
+            session,
+          });
+        }
+      }
     });
-
-    await ReadState.create({
-      userId,
-      channelId: channel._id,
-      lastReadMessageId: null, // new channel, no messages yet
-      lastReadAt: new Date(),
-      unreadCount: 0,
-      mentionCount: 0,
-    });
-  } else {
-    // 5. Public channel — seed ReadState for all current team members
-    //    so no existing messages appear as unread for anyone
-    const teamMemberIds = await Membership.distinct("userId", {
-      teamId,
-      orgId,
-      scope: MEMBER_SCOPES.TEAM,
-    });
-
-    if (teamMemberIds.length > 0) {
-      const readStates = teamMemberIds.map((memberId) => ({
-        userId: memberId,
-        channelId: channel._id,
-        lastReadMessageId: null, // new channel, no messages yet
-        lastReadAt: new Date(),
-        unreadCount: 0,
-        mentionCount: 0,
-      }));
-
-      await ReadState.insertMany(readStates, { ordered: false });
-    }
+  } finally {
+    await session.endSession();
   }
 };
 
@@ -887,7 +916,7 @@ const addChannelMember = async ({
     const callerIsAdmin =
       callerOrgMembership.role === ORG_ROLES.OrgOwner ||
       callerOrgMembership.role === ORG_ROLES.OrgAdmin ||
-      callerTeamMembership?.role === TEAM_ROLES.TeamAdmin;
+      callerTeamMembership?.role === ORG_ROLES.TeamAdmin;
 
     if (!callerIsAdmin) {
       throw new ErrorHandler(

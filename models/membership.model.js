@@ -1,5 +1,8 @@
 import mongoose, { model, Schema, Types } from "mongoose";
-import { MEMBER_SCOPES_VALUES } from "../constants/user.constants.js";
+import {
+  MEMBER_SCOPES,
+  MEMBER_SCOPES_VALUES,
+} from "../constants/user.constants.js";
 import { ORG_ROLES_VALUES } from "../constants/roles.constants.js";
 import { ErrorHandler } from "#utils/errorHandler.util.js";
 import { EXCEPTION_CODES } from "#constants/exceptionCodes.constants.js";

@@ -27,6 +27,7 @@ const TryCatch = (functionToWrap) => async (req, res, next) => {
   try {
     await functionToWrap(req, res, next);
   } catch (error) {
+    console.log("Error from TryCatch Block: ", error);
     next(error);
   }
 };

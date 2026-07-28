@@ -1,3 +1,10 @@
+const FILE_STATUSES = Object.freeze({
+  PENDING: "pending",
+  ATTACHED: "attached",
+});
+
+const FILE_STATUSES_VALUES = Object.values(FILE_STATUSES);
+
 const CLOUDINARY_RESOURCE_TYPES = Object.freeze({
   IMAGE: "image",
   VIDEO: "video",
@@ -82,6 +89,8 @@ const CODE_MIME_TYPES = new Set([
 ]);
 
 export {
+  FILE_STATUSES,
+  FILE_STATUSES_VALUES,
   CLOUDINARY_RESOURCE_TYPES,
   CLOUDINARY_RESOURCE_TYPES_VALUES,
   FILE_TYPES,

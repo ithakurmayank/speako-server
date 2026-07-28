@@ -5,7 +5,7 @@ const { ObjectId } = Types;
 const pinnedMessageSchema = new Schema(
   {
     messageId: { type: ObjectId, ref: "Message", required: true },
-    pinnedBy: { type: ObjectId, ref: "User", required: true },
+    pinnedByUserId: { type: ObjectId, ref: "User", required: true },
 
     // Exactly ONE set:
     channelId: { type: ObjectId, ref: "Channel", default: null },

@@ -1,6 +1,7 @@
 import { ALL_ROLES_VALUES, ORG_ROLES } from "#constants/roles.constants.js";
 import { isEmailValid, orgSlugRegex } from "#utils/regex.util.js";
 import { z } from "zod";
+import { pageNumber, pageSize, search } from "./common.validators.js";
 
 const getOrganizationMembersSchema = z.object({
   params: z.object({
@@ -10,10 +11,10 @@ const getOrganizationMembersSchema = z.object({
   }),
 
   query: z.object({
-    search: z.string().optional(),
-    role: z.string().optional(),
-    pageNumber: z.string().optional(),
-    pageSize: z.string().optional(),
+    search: search(),
+    role: z.string().trim().optional(),
+    pageSize: pageSize(),
+    pageNumber: pageNumber(),
   }),
 });
 

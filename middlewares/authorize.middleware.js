@@ -1,8 +1,9 @@
+// authorize.middleware.js
 import { EXCEPTION_CODES } from "../constants/exceptionCodes.constants.js";
 import { hasPermission } from "../lib/hasPermission.lib.js";
 import { ErrorHandler } from "../utils/errorHandler.util.js";
 
-const authorize = (permission) => {
+const authorize = (permission = null) => {
   return async (req, res, next) => {
     try {
       const pick = (key) =>
@@ -16,6 +17,12 @@ const authorize = (permission) => {
       };
 
       req.context = context;
+
+      // No permission passed -> route just needs context populated,
+      // no actual authorization check required.
+      if (!permission) {
+        return next();
+      }
 
       const allowed = await hasPermission(req.userId, permission, context);
 

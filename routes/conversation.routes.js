@@ -40,10 +40,11 @@ router.get(
   lookupDirectConversation,
 );
 
-router.get("/:conversationId", getConversation);
+router.get("/:conversationId", authorize(null), getConversation);
 
 router.get(
   "/:conversationId/participants",
+  authorize(null),
   validate(getParticipantsSchema),
   getParticipants,
 );

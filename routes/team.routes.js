@@ -33,11 +33,11 @@ const router = Router({ mergeParams: true });
 // router.use(authenticate);
 
 //#region GET routes
-router.get("/", validate(getTeamsSchema), getTeams);
+router.get("/", authorize(null), validate(getTeamsSchema), getTeams);
 
-router.get("/:teamId", getTeam);
+router.get("/:teamId", authorize(null), getTeam);
 
-router.get("/:teamId/members", getTeamMembers);
+router.get("/:teamId/members", authorize(null), getTeamMembers);
 
 //#endregion
 
@@ -94,7 +94,11 @@ router.put(
   updateTeamMemberRole,
 );
 
-router.delete("/:teamId/members/:membershipId", removeTeamMember);
+router.delete(
+  "/:teamId/members/:membershipId",
+  authorize(PERMISSIONS.TEAM_MEMBERS_KICK),
+  removeTeamMember,
+);
 
 router.delete("/:teamId/members/me", leaveTeam);
 

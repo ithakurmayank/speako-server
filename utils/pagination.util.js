@@ -1,3 +1,4 @@
+//Methods for offset pagination
 const getOffsetPaginationValues = (query = {}) => {
   let { pageNumber = 1, pageSize = 20 } = query;
 
@@ -13,7 +14,6 @@ const getOffsetPaginationValues = (query = {}) => {
     limit: parsedSize,
   };
 };
-
 const getPaginatedResponse = ({ data, totalCount, pageNumber, pageSize }) => {
   const totalPages = pageSize > 0 ? Math.ceil(totalCount / pageSize) : 0;
 
@@ -28,4 +28,26 @@ const getPaginatedResponse = ({ data, totalCount, pageNumber, pageSize }) => {
   };
 };
 
-export { getOffsetPaginationValues, getPaginatedResponse };
+//Methods for cursor pagination
+const getCursorPaginationValues = (
+  query = {}, //ObjectId of oldest message on current page
+  defaultPageSize = 50,
+) => {
+  const pageSize = Math.min(
+    100,
+    Math.max(1, parseInt(query.pageSize) || defaultPageSize),
+  );
+  const beforeId = query.beforeId ?? null;
+
+  return { pageSize, beforeId };
+};
+const getCursorPaginatedResponse = ({ data, hasMore, nextCursor }) => {
+  return { data, hasMore, nextCursor };
+};
+
+export {
+  getOffsetPaginationValues,
+  getPaginatedResponse,
+  getCursorPaginationValues,
+  getCursorPaginatedResponse,
+};

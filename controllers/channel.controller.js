@@ -43,8 +43,9 @@ const getChannelMembers = TryCatch(async (req, res) => {
   return sendResponse(
     res,
     200,
-    result,
+    null,
     "Channel members fetched successfully.",
+    result,
   );
 });
 //#endregion

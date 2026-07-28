@@ -1,4 +1,7 @@
-import { OUTBOX_CONFIG } from "#constants/common.constants.js";
+import {
+  OUTBOX_CONFIG,
+  OUTBOX_MESSAGE_TYPES,
+} from "#constants/common.constants.js";
 import { TEMPLATE_TYPES } from "#models/notificationTemplate.model.js";
 import { OutboxMessage } from "#models/outboxMessage.model.js";
 import { emailService } from "#services/email.service.js";
@@ -8,7 +11,7 @@ const { MAX_RETRIES, POLL_INTERVAL_MS } = OUTBOX_CONFIG;
 
 const processOutbox = async () => {
   const messages = await OutboxMessage.find({
-    type: TEMPLATE_TYPES.EMAIL,
+    type: OUTBOX_MESSAGE_TYPES.EMAIL_PAYLOAD,
     isProcessed: false,
     isDeleted: false,
     nextAttemptAt: { $lte: new Date() },

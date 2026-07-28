@@ -19,6 +19,7 @@ import {
   getOffsetPaginationValues,
   getPaginatedResponse,
 } from "#utils/pagination.util.js";
+import { CLOUDINARY_RESOURCE_TYPES } from "#constants/fileTypes.constants.js";
 
 //#region GET services
 const getOrganization = async ({ orgId, userId }) => {

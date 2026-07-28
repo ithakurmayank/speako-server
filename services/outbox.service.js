@@ -1,9 +1,9 @@
-import { TEMPLATE_TYPES } from "#models/notificationTemplate.model.js";
+import { OUTBOX_MESSAGE_TYPES } from "#constants/common.constants.js";
 import { OutboxMessage } from "#models/outboxMessage.model.js";
 
 const queueEmail = async (payload, createdBy) => {
   return OutboxMessage.create({
-    type: TEMPLATE_TYPES.EMAIL,
+    type: OUTBOX_MESSAGE_TYPES.EMAIL_PAYLOAD,
     payload,
     createdBy,
     nextAttemptAt: new Date(),

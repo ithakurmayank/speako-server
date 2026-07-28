@@ -27,6 +27,8 @@ const messageSchema = new Schema(
   {
     senderId: { type: ObjectId, ref: "User", required: true },
 
+    clientMessageId: { type: String, required: true },
+
     // Context — exactly ONE set:
     channelId: { type: ObjectId, ref: "Channel", default: null },
     conversationId: { type: ObjectId, ref: "Conversation", default: null },
@@ -88,6 +90,21 @@ messageSchema.index(
 
 // Mentions:
 messageSchema.index({ mentions: 1, _id: -1 });
+
+messageSchema.index(
+  { channelId: 1, senderId: 1, clientMessageId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { channelId: { $exists: true, $ne: null } },
+  },
+);
+messageSchema.index(
+  { conversationId: 1, senderId: 1, clientMessageId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { conversationId: { $exists: true, $ne: null } },
+  },
+);
 
 export const Message =
   mongoose.models.Message || model("Message", messageSchema);

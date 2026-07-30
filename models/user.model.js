@@ -1,6 +1,8 @@
 import { hash } from "bcrypt";
 import mongoose, { model, Schema, Types } from "mongoose";
 
+const { ObjectId } = Types;
+
 const userSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -22,6 +24,7 @@ const userSchema = new Schema(
     isEmailVerified: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
+    deletedBy: { type: ObjectId, ref: "User", default: null },
   },
   { timestamps: true },
 );

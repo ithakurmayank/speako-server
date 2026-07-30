@@ -1,7 +1,7 @@
 import mongoose, { model, Schema, Types } from "mongoose";
 import {
-  DM_MESSAGE_STATUS_VALUES,
   GROUP_MESSAGE_STATUS_VALUES,
+  MESSAGE_TYPES_VALUES,
 } from "../constants/message.constants.js";
 
 const { ObjectId } = Types;
@@ -33,7 +33,12 @@ const messageSchema = new Schema(
     channelId: { type: ObjectId, ref: "Channel", default: null },
     conversationId: { type: ObjectId, ref: "Conversation", default: null },
 
-    isSystem: { type: Boolean, default: false },
+    //Decides message display style in UI
+    messageType: {
+      type: String,
+      required: true,
+      enum: MESSAGE_TYPES_VALUES,
+    },
     content: { type: String, default: "", maxlength: 10000 },
     attachments: [{ type: ObjectId, ref: "File" }], // references File collection
 
@@ -46,16 +51,10 @@ const messageSchema = new Schema(
 
     mentions: [{ type: ObjectId, ref: "User" }],
 
-    // 1-on-1 DM delivery state:
-    dmStatus: {
-      type: String,
-      enum: DM_MESSAGE_STATUS_VALUES,
-      default: null,
-    },
     dmDeliveredAt: { type: Date, default: null },
     dmSeenAt: { type: Date, default: null },
 
-    // Group chat delivery state (≤20 participants only). No delivery states are created for channels
+    // Group chat delivery state (≤GROUP_RECEIPT_THRESHOLD participants only). No delivery states are created for channels
     receipts: { type: [receiptSchema], default: [] },
 
     // Edit tracking:

@@ -1,10 +1,13 @@
 import { CHANNEL_TYPES } from "#constants/channel.constants.js";
 import { OUTBOX_MESSAGE_TYPES } from "#constants/common.constants.js";
+import { CONVERSATION_TYPES } from "#constants/conversation.constants.js";
 import { EXCEPTION_CODES } from "#constants/exceptionCodes.constants.js";
 import { FILE_STATUSES, FILE_TYPES } from "#constants/fileTypes.constants.js";
 import { ORG_ROLES } from "#constants/roles.constants.js";
 import { MEMBER_SCOPES } from "#constants/user.constants.js";
 import { Channel } from "#models/channel.model.js";
+import { Conversation } from "#models/conversation.model.js";
+import { ConversationParticipant } from "#models/conversationParticipant.model.js";
 import { File } from "#models/file.model.js";
 import { Membership } from "#models/membership.model.js";
 import { Message } from "#models/message.model.js";
@@ -20,123 +23,91 @@ import {
 } from "#utils/pagination.util.js";
 import mongoose from "mongoose";
 import { getMessageById } from "./common.service.js";
-import { MESSAGE_TYPES } from "#constants/message.constants.js";
+import { Notification } from "#models/notification.model.js";
+import { NOTIFICATION_TYPES } from "#constants/notifications.constants.js";
+import { ReadState } from "#models/readState.model.js";
+import { GROUP_MESSAGE_STATUS } from "#constants/message.constants.js";
 import { deriveMessageType } from "#utils/message.util.js";
 
 //#region GET services
-const getChannelMessages = async ({
-  orgId,
-  teamId,
-  channelId,
-  userId,
-  query,
-}) => {
+const getConversationMessages = async ({ conversationId, userId, query }) => {
   const { pageSize, beforeId } = getCursorPaginationValues(query);
   const threadRootMessageId = query.threadRootMessageId ?? null;
 
-  // 1. Resolve caller's org + team roles in parallel
-  const [callerOrgMembership, callerTeamMembership] = await Promise.all([
-    Membership.findOne({
-      userId,
-      orgId,
-      scope: MEMBER_SCOPES.ORG,
-    }).lean(),
-
-    Membership.findOne({
-      userId,
-      orgId,
-      teamId,
-      scope: MEMBER_SCOPES.TEAM,
-    }).lean(),
-  ]);
-
-  if (!callerOrgMembership) {
-    throw new ErrorHandler(
-      "Channel not found.",
-      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
-    );
-  }
-
-  const callerIsAdmin =
-    callerOrgMembership.role === ORG_ROLES.OrgOwner ||
-    callerOrgMembership.role === ORG_ROLES.OrgAdmin ||
-    callerTeamMembership?.role === ORG_ROLES.TeamAdmin;
-
-  // 2. Verify channel exists and caller has access
-  const channel = await Channel.findOne({
-    _id: channelId,
-    teamId,
-    orgId,
+  // Step 1: Verify the conversation exists and the caller has access
+  // Direct: caller must be one of the two participants.
+  // Group: caller must be an active (not left) participant.
+  const conversation = await Conversation.findOne({
+    _id: conversationId,
     isDeleted: false,
+    $or: [
+      {
+        type: CONVERSATION_TYPES.DIRECT,
+        $or: [
+          { directParticipantAId: userId },
+          { directParticipantBId: userId },
+        ],
+      },
+      {
+        type: CONVERSATION_TYPES.GROUP,
+      },
+    ],
   }).lean();
 
-  if (!channel) {
+  const isParticipant =
+    conversation?.type === CONVERSATION_TYPES.DIRECT
+      ? true
+      : await ConversationParticipant.exists({
+          conversationId,
+          userId,
+          hasLeft: false,
+        });
+
+  if (!conversation || !isParticipant) {
     throw new ErrorHandler(
-      "Channel not found.",
+      "Conversation not found.",
       EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
 
-  if (channel.isPrivate && !callerIsAdmin) {
-    const callerChannelMembership = await Membership.findOne({
-      userId,
-      channelId,
-      teamId,
-      orgId,
-      scope: MEMBER_SCOPES.CHANNEL,
-    }).lean();
-
-    if (!callerChannelMembership) {
-      throw new ErrorHandler(
-        "Channel not found.",
-        EXCEPTION_CODES.RESOURCE_NOT_FOUND,
-      );
-    }
-  }
-
-  // 3. Build message filter
-  //    threadRootMessageId=null → root messages only
-  //    threadRootMessageId=<id> → replies under that thread
+  // Step 2: Build the message query
+  // Thread mode: return replies under threadRootMessageId.
+  // Feed mode: return root messages only (threadId: null).
+  // Cursor: if beforeId is provided, return messages older than that _id.
   const filter = {
-    channelId,
+    conversationId,
+    deletedAt: null,
     threadId: threadRootMessageId ?? null,
+    ...(beforeId && { _id: { $lt: beforeId } }),
   };
 
-  // Cursor: only return messages older than the given message ID
-  // ObjectId is chronologically ordered so _id < beforeId = older messages
-  if (beforeId) {
-    filter._id = { $lt: beforeId };
-  }
-
-  // 4. Fetch pageSize + 1 to determine if there are more pages
+  // Step 3: Fetch pageSize + 1 to determine if there are more pages
   const messages = await Message.find(filter)
     .sort({ _id: -1 })
     .limit(pageSize + 1)
-    .populate(
-      "attachments",
-      "url originalName mimeType fileType sizeInBytes width height duration thumbnailUrl",
-    )
-    .populate("mentions", "_id name username")
     .lean();
 
   const hasMore = messages.length > pageSize;
   if (hasMore) messages.pop();
 
   if (messages.length === 0) {
-    return { data: [], hasMore: false, nextCursor: null };
+    return getCursorPaginatedResponse({
+      data: [],
+      hasMore: false,
+      nextCursor: null,
+    });
   }
 
-  // 5. Fetch sender details for this page of messages
+  // Step 4: Batch fetch sender details for this page of messages
+  // One User.find for all unique senderIds — avoids N+1 queries.
   const senderIds = [...new Set(messages.map((m) => m.senderId.toString()))];
-
   const senders = await User.find({ _id: { $in: senderIds } })
     .select("_id name icon")
     .lean();
+  const sendersMap = new Map(senders.map((s) => [s._id.toString(), s]));
 
-  const sendersMap = new Map(senders.map((u) => [u._id.toString(), u]));
-
-  // 6. Stamp reactions — batch fetch all reactions for this page,
-  //    group by messageId + emoji, flag ReactedByMe for the caller
+  // Step 5: Stamp reactions — batch fetch all reactions for this page,
+  // group by messageId + emoji, flag reactedByMe for the caller.
   const messageIds = messages.map((m) => m._id);
 
   const rawReactions = await Message.aggregate([
@@ -183,14 +154,13 @@ const getChannelMessages = async ({
     rawReactions.map((r) => [r._id.toString(), r.reactions]),
   );
 
-  // 7. Shape the response
-  const data = messages.map((message) =>
-    toMessageDTO({
-      message,
-      sender: sendersMap.get(message.senderId.toString()),
-      reactions: reactionsMap.get(message._id.toString()) ?? [],
-    }),
-  );
+  // Step 6: Shape each message into the MessageDto
+  // Merge sender details and reaction summaries per message.
+  const data = messages.map((message) => {
+    const sender = sendersMap.get(message.senderId.toString());
+    const reactions = reactionsMap.get(message._id.toString()) ?? [];
+    return toMessageDTO({ message, sender, reactions });
+  });
 
   // Step 7: Build cursor for the next page
   // nextCursor is the _id of the oldest message on this page —
@@ -202,10 +172,10 @@ const getChannelMessages = async ({
 //#endregion
 
 //#region UPDATE services
-const sendChannelMessage = async ({
-  orgId,
-  teamId,
-  channelId,
+const GROUP_RECEIPT_THRESHOLD = 20;
+
+const sendConversationMessage = async ({
+  conversationId,
   userId,
   clientMessageId,
   content,
@@ -213,87 +183,48 @@ const sendChannelMessage = async ({
   mentionedUserIds,
   threadRootMessageId,
 }) => {
-  // Step 1: Channel + team archive guard
-  // Fetch channel and its parent team's archive status upfront.
-  // Also need channel type to enforce announcement-only posting rules.
-  const channel = await Channel.findOne({
-    _id: channelId,
-    teamId,
-    orgId,
+  // Step 1: Verify the conversation exists and the caller has access
+  // Direct: caller must be one of the two fixed participants.
+  // Group: caller must be an active (not left) participant.
+  const conversation = await Conversation.findOne({
+    _id: conversationId,
     isDeleted: false,
+    $or: [
+      {
+        type: CONVERSATION_TYPES.DIRECT,
+        $or: [
+          { directParticipantAId: userId },
+          { directParticipantBId: userId },
+        ],
+      },
+      { type: CONVERSATION_TYPES.GROUP },
+    ],
   }).lean();
 
-  if (!channel) {
+  const isParticipant =
+    conversation?.type === CONVERSATION_TYPES.DIRECT
+      ? true
+      : conversation
+        ? await ConversationParticipant.exists({
+            conversationId,
+            userId,
+            hasLeft: false,
+          })
+        : false;
+
+  if (!conversation || !isParticipant) {
     throw new ErrorHandler(
-      "Channel not found.",
+      "Conversation not found.",
       EXCEPTION_CODES.RESOURCE_NOT_FOUND,
     );
   }
 
-  const team = await Team.findOne({
-    _id: teamId,
-    orgId,
-    isDeleted: { $ne: true },
-  }).lean();
-
-  if (team?.isArchived) {
-    throw new ErrorHandler(
-      "Cannot send message to an archived team channel.",
-      EXCEPTION_CODES.RESOURCE_CONFLICT,
-    );
-  }
-
-  if (channel.isArchived) {
-    throw new ErrorHandler(
-      "Cannot send message from an archived channel.",
-      EXCEPTION_CODES.RESOURCE_CONFLICT,
-    );
-  }
-
-  // Step 2: Announcement channel guard
-  // Only channel moderators, team admins, or org admins can post in
-  // announcement channels. Regular members are blocked.
-  if (channel.type === CHANNEL_TYPES.ANNOUNCEMENT) {
-    const [isChannelModerator, isTeamAdmin, isOrgAdmin] = await Promise.all([
-      Membership.exists({
-        userId,
-        channelId,
-        teamId,
-        orgId,
-        scope: MEMBER_SCOPES.CHANNEL,
-        role: ORG_ROLES.ChannelModerator,
-      }),
-
-      Membership.exists({
-        userId,
-        teamId,
-        orgId,
-        scope: MEMBER_SCOPES.TEAM,
-        role: ORG_ROLES.TeamAdmin,
-      }),
-
-      Membership.exists({
-        userId,
-        orgId,
-        scope: MEMBER_SCOPES.ORG,
-        role: { $in: [ORG_ROLES.OrgOwner, ORG_ROLES.OrgAdmin] },
-      }),
-    ]);
-
-    if (!isChannelModerator && !isTeamAdmin && !isOrgAdmin) {
-      throw new ErrorHandler(
-        "Only channel moderators can post in announcement channels.",
-        EXCEPTION_CODES.FORBIDDEN,
-      );
-    }
-  }
-
-  // Step 3: Idempotency check
+  // Step 2: Idempotency check
   // If this clientMessageId was already processed, return the existing message
   // instead of creating a duplicate. Handles network retries gracefully.
   const existingMessage = await Message.findOne({
     senderId: userId,
-    channelId,
+    conversationId,
     clientMessageId,
   }).lean();
 
@@ -301,13 +232,13 @@ const sendChannelMessage = async ({
     return await getMessageById(existingMessage._id, userId);
   }
 
-  // Step 4: Thread root validation
-  // If replying in a thread, validate the root message exists in this channel
-  // and is itself a root message (no nested threads — max depth is 1).
+  // Step 3: Thread root validation
+  // If replying in a thread, validate the root message exists in this
+  // conversation and is itself a root (no nested threads — max depth is 1).
   if (threadRootMessageId) {
     const threadRoot = await Message.findOne({
       _id: threadRootMessageId,
-      channelId,
+      conversationId,
       deletedAt: null,
     }).lean();
 
@@ -326,7 +257,7 @@ const sendChannelMessage = async ({
     }
   }
 
-  // Step 5: Attachment validation
+  // Step 4: Attachment validation
   // Files must have been uploaded first and be in "pending" status,
   // uploaded by this sender, and not yet attached to another message.
   let attachedFiles = [];
@@ -352,14 +283,54 @@ const sendChannelMessage = async ({
     }
   }
 
-  // Step 6: Derive message type
-  // Text takes priority. If no text, type is derived from file types.
-  // A message must have text or at least one attachment.
+  // Step 5: Derive message type guard
+  // Text takes priority. If no text, there must be at least one attachment.
   const messageType = deriveMessageType(content, attachedFiles);
 
+  // Step 6: Resolve other participants for ReadState fan-out + receipt seeding
+  // Direct: the other participant is whichever of the two fixed IDs isn't the sender.
+  // Group: all active participants except the sender.
+  // We verify they still exist as users — warn and continue if any are missing
+  // (e.g. soft-deleted accounts), since messaging shouldn't be blocked by this.
+  let otherParticipantIds;
+  if (conversation.type === CONVERSATION_TYPES.DIRECT) {
+    const otherId = conversation.directParticipantAId.equals(userId)
+      ? conversation.directParticipantBId
+      : conversation.directParticipantAId;
+    otherParticipantIds = [otherId];
+  } else {
+    const groupParticipants = await ConversationParticipant.find({
+      conversationId,
+      userId: { $ne: userId },
+      hasLeft: false,
+    })
+      .select("userId")
+      .lean();
+    otherParticipantIds = groupParticipants.map((p) => p.userId);
+  }
+
+  const activeOtherUsers = await User.find({
+    _id: { $in: otherParticipantIds },
+    isDeleted: false,
+  })
+    .select("_id")
+    .lean();
+
+  const activeOtherUserIds = activeOtherUsers.map((u) => u._id);
+
+  if (activeOtherUserIds.length !== otherParticipantIds.length) {
+    const foundIds = new Set(activeOtherUserIds.map((id) => id.toString()));
+    const missingIds = otherParticipantIds
+      .filter((id) => !foundIds.has(id.toString()))
+      .map((id) => id.toString());
+    console.warn(
+      `One or more conversation participants could not be found. Missing: ${missingIds.join(", ")}`,
+    );
+  }
+
   // Step 7: Resolve thread root sender
-  // Needed for the outbox payload so the background worker can create
-  // a ThreadReply notification without an extra DB query.
+  // Needed to create a ThreadReply notification for the root message's sender
+  // without an extra DB query inside the transaction.
   let threadRootSenderId = null;
   if (threadRootMessageId) {
     const threadRoot = await Message.findOne({ _id: threadRootMessageId })
@@ -369,8 +340,8 @@ const sendChannelMessage = async ({
   }
 
   // Step 8: Build content preview
-  // Used by the outbox worker for notification previews.
-  // Text is truncated to 500 chars; fallback to paperclip emoji + name.
+  // Used for notification previews — text truncated to 500 chars,
+  // or a descriptive fallback based on the first attachment's type.
   const buildContentPreview = (text, firstFile) => {
     if (text?.trim()) return text.trim().slice(0, 500);
     if (!firstFile) return "[Attachment]";
@@ -386,15 +357,18 @@ const sendChannelMessage = async ({
   };
 
   const contentPreview = buildContentPreview(content, attachedFiles[0] ?? null);
+  const mentionedSet = new Set(mentionedUserIds.map((id) => id.toString()));
+  const now = new Date();
 
   // Step 9: Persist everything atomically
   // All writes happen in a single transaction:
   //   a) Message row
-  //   b) File attachments linked to the message
-  //   c) Mentions stored on the message
-  //   d) Thread root reply counter incremented
-  //   e) Outbox row queued for background worker (ReadState fan-out +
-  //      mention/thread-reply notifications)
+  //   b) File attachments scoped to this conversation
+  //   c) Thread root reply counter incremented
+  //   d) Conversation lastMessageAt updated
+  //   e) Group message receipts seeded (groups ≤ GROUP_RECEIPT_THRESHOLD only)
+  //   f) ReadState unread/mention counts incremented for all other participants
+  //   g) Mention + ThreadReply notifications created inline
   let savedMessage;
 
   const session = await mongoose.startSession();
@@ -404,13 +378,13 @@ const sendChannelMessage = async ({
       const [message] = await Message.create(
         [
           {
-            channelId,
+            conversationId,
             senderId: userId,
+            clientMessageId,
             threadId: threadRootMessageId ?? null,
             content: content?.trim() ?? "",
             attachments: fileIds,
             mentions: mentionedUserIds,
-            clientMessageId,
             messageType,
           },
         ],
@@ -419,14 +393,14 @@ const sendChannelMessage = async ({
 
       savedMessage = message;
 
-      // 9b — Link files to this message and mark them as attached
+      // 9b — Mark files as attached and scope them to this conversation
       if (fileIds.length > 0) {
         await File.updateMany(
           { _id: { $in: fileIds } },
           {
             $set: {
-              channelId,
-              conversationId: null,
+              conversationId,
+              channelId: null,
               status: FILE_STATUSES.ATTACHED,
               expiresAt: null,
             },
@@ -439,46 +413,112 @@ const sendChannelMessage = async ({
       if (threadRootMessageId) {
         await Message.updateOne(
           { _id: threadRootMessageId },
-          {
-            $inc: { replyCount: 1 },
-            $set: { lastReplyAt: new Date() },
-          },
+          { $inc: { replyCount: 1 }, $set: { lastReplyAt: now } },
           { session },
         );
       }
 
-      // 9d — Queue outbox row for background worker
-      // Worker handles: ReadState unread count fan-out for all channel members,
-      // mention notifications, and thread-reply notifications.
-      await OutboxMessage.create(
-        [
-          {
-            type: OUTBOX_MESSAGE_TYPES.CHANNEL_MESSAGE_SEND,
-            payload: {
-              messageId: message._id,
-              channelId,
-              senderId: userId,
-              mentionedUserIds,
-              threadRootMessageId: threadRootMessageId ?? null,
-              threadRootSenderId,
-              contentPreview,
-            },
-            isProcessed: false,
-            createdBy: userId,
-          },
-        ],
+      // 9d — Stamp lastMessageAt on the conversation for sidebar ordering
+      await Conversation.updateOne(
+        { _id: conversationId },
+        { $set: { lastMessageAt: now } },
         { session },
       );
+
+      // 9e — Seed delivery receipts for small group conversations
+      // Only group conversations with ≤ GROUP_RECEIPT_THRESHOLD total participants
+      // get per-member receipt rows. Large groups and direct conversations skip this.
+      // Receipts are embedded on the message as [{ userId, status, timestamp }].
+      if (
+        conversation.type === CONVERSATION_TYPES.GROUP &&
+        activeOtherUserIds.length + 1 <= GROUP_RECEIPT_THRESHOLD
+      ) {
+        const receipts = activeOtherUserIds.map((participantId) => ({
+          userId: participantId,
+          status: GROUP_MESSAGE_STATUS.DELIVERED,
+          timestamp: now,
+        }));
+
+        await Message.updateOne(
+          { _id: message._id },
+          { $push: { receipts: { $each: receipts } } },
+          { session },
+        );
+      }
+
+      // 9f — Increment ReadState unread counts for all other active participants
+      // Participants who are mentioned get both unreadCount and mentionCount bumped.
+      // ReadState rows are guaranteed to exist — provisioned at membership creation.
+      await Promise.all(
+        activeOtherUserIds.map((participantId) => {
+          const isMentioned = mentionedSet.has(participantId.toString());
+          return ReadState.updateOne(
+            { userId: participantId, conversationId },
+            isMentioned
+              ? { $inc: { unreadCount: 1, mentionCount: 1 } }
+              : { $inc: { unreadCount: 1 } },
+            { session },
+          );
+        }),
+      );
+
+      // 9g — Create inline notifications for mentions and thread replies
+      // Mention: one notification per mentioned user who is an active participant
+      // (excluding the sender mentioning themselves).
+      // ThreadReply: notify the root message's sender if they're a different
+      // user and still an active participant in this conversation.
+      const activeOtherUserIdSet = new Set(
+        activeOtherUserIds.map((id) => id.toString()),
+      );
+
+      const notifications = [];
+
+      for (const mentionedUserId of mentionedSet) {
+        if (
+          mentionedUserId !== userId.toString() &&
+          activeOtherUserIdSet.has(mentionedUserId)
+        ) {
+          notifications.push({
+            recipientId: mentionedUserId,
+            actorId: userId,
+            type: NOTIFICATION_TYPES.MENTION,
+            messageId: message._id,
+            conversationId,
+            preview: contentPreview,
+            isRead: false,
+          });
+        }
+      }
+
+      if (
+        threadRootSenderId &&
+        !threadRootSenderId.equals(userId) &&
+        activeOtherUserIdSet.has(threadRootSenderId.toString())
+      ) {
+        notifications.push({
+          recipientId: threadRootSenderId,
+          actorId: userId,
+          type: NOTIFICATION_TYPES.THREAD_REPLY,
+          messageId: message._id,
+          conversationId,
+          preview: contentPreview,
+          isRead: false,
+        });
+      }
+
+      if (notifications.length > 0) {
+        await Notification.create(notifications, { session });
+      }
     });
   } catch (err) {
-    // Duplicate clientMessageId race condition -
+    // Duplicate clientMessageId race condition —
     // If two concurrent requests send the same message, the unique index
-    // on (senderId, clientMessageId) fires. Return the already-saved message
-    // instead of throwing.
+    // on (senderId, conversationId, clientMessageId) fires. Return the
+    // already-saved message instead of throwing.
     if (err.code === 11000) {
       const duplicate = await Message.findOne({
         senderId: userId,
-        channelId,
+        conversationId,
         clientMessageId,
       }).lean();
 
@@ -495,18 +535,16 @@ const sendChannelMessage = async ({
   return await getMessageById(savedMessage._id, userId);
 };
 
-const forceDeleteChannelMessage = async ({
-  orgId,
-  teamId,
-  channelId,
+const forceDeleteConversationMessage = async ({
+  conversationId,
   messageId,
   userId,
 }) => {
   // Step 1: Fetch the target message
-  // Must exist in this specific channel and not already be soft-deleted.
+  // Must exist in this specific conversation and not already be soft-deleted.
   const message = await Message.findOne({
     _id: messageId,
-    channelId,
+    conversationId,
   });
 
   if (!message || message.deletedAt !== null) {
@@ -532,12 +570,16 @@ const forceDeleteChannelMessage = async ({
   await message.save();
 };
 
-const deleteOwnMessage = async ({ channelId, messageId, userId }) => {
+const deleteOwnConversationMessage = async ({
+  conversationId,
+  messageId,
+  userId,
+}) => {
   // Step 1: Fetch the target message
-  // Must exist in this specific channel and not already be soft-deleted.
+  // Must exist in this specific conversation and not already be soft-deleted.
   const message = await Message.findOne({
     _id: messageId,
-    channelId,
+    conversationId,
   });
 
   if (!message || message.deletedAt !== null) {
@@ -563,13 +605,18 @@ const deleteOwnMessage = async ({ channelId, messageId, userId }) => {
   await message.save();
 };
 
-const pinChannelMessage = async ({ channelId, messageId, userId }) => {
-  // Step 1: Fetch the message + channel and team archive state
-  // Need content and first attachment upfront to build the content snapshot
-  // that gets stored on the pin — avoids a second message fetch later.
+const pinConversationMessage = async ({
+  conversationId,
+  messageId,
+  userId,
+}) => {
+  // Step 1: Fetch the target message
+  // Must exist in this conversation and not be soft-deleted.
+  // Also fetch first attachment upfront to build the content snapshot
+  // without a second message fetch later.
   const message = await Message.findOne({
     _id: messageId,
-    channelId,
+    conversationId,
     deletedAt: null,
   })
     .select("content attachments")
@@ -582,46 +629,11 @@ const pinChannelMessage = async ({ channelId, messageId, userId }) => {
     );
   }
 
-  const channel = await Channel.findOne({
-    _id: channelId,
-    isDeleted: false,
-  })
-    .select("isArchived teamId")
-    .lean();
-
-  if (!channel) {
-    throw new ErrorHandler(
-      "Channel not found.",
-      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
-    );
-  }
-
-  const team = await Team.findOne({
-    _id: channel.teamId,
-    isDeleted: { $ne: true },
-  })
-    .select("isArchived")
-    .lean();
-
-  if (team?.isArchived) {
-    throw new ErrorHandler(
-      "Cannot pin in an archived team channel.",
-      EXCEPTION_CODES.RESOURCE_CONFLICT,
-    );
-  }
-
-  if (channel.isArchived) {
-    throw new ErrorHandler(
-      "Cannot pin in an archived channel.",
-      EXCEPTION_CODES.RESOURCE_CONFLICT,
-    );
-  }
-
   // Step 2: Idempotency — return existing pin if already pinned
   // Handles concurrent or duplicate pin requests gracefully.
   const existingPin = await PinnedMessage.findOne({
     messageId,
-    channelId,
+    conversationId,
   }).lean();
 
   if (existingPin) {
@@ -661,13 +673,13 @@ const pinChannelMessage = async ({ channelId, messageId, userId }) => {
   );
 
   // Step 4: Create the pin — handle concurrent duplicate via unique index
-  // The unique index on { messageId, channelId } prevents double-pinning.
+  // The unique index on { messageId, conversationId } prevents double-pinning.
   // If two requests race, the loser catches the duplicate key error and
   // returns the winner's pin instead of throwing.
   try {
     const pin = await PinnedMessage.create({
       messageId,
-      channelId,
+      conversationId,
       pinnedBy: userId,
       contentSnapshot,
       pinnedAt: new Date(),
@@ -683,7 +695,7 @@ const pinChannelMessage = async ({ channelId, messageId, userId }) => {
     if (err.code === 11000) {
       const concurrentPin = await PinnedMessage.findOne({
         messageId,
-        channelId,
+        conversationId,
       }).lean();
 
       if (concurrentPin) {
@@ -699,16 +711,16 @@ const pinChannelMessage = async ({ channelId, messageId, userId }) => {
   }
 };
 
-const toggleChannelMessageReaction = async ({
-  channelId,
+const toggleConversationMessageReaction = async ({
+  conversationId,
   messageId,
   userId,
   emoji,
 }) => {
-  // Step 1: Verify the message exists in this channel and is not deleted
+  // Step 1: Verify the message exists in this conversation and is not deleted
   const messageExists = await Message.exists({
     _id: messageId,
-    channelId,
+    conversationId,
     deletedAt: null,
   });
 
@@ -720,6 +732,9 @@ const toggleChannelMessageReaction = async ({
   }
 
   // Step 2: Check if the user has already reacted with this emoji
+  // Reactions are embedded on the message as [{ emoji, users: [ObjectId] }].
+  // We look for a subdocument matching this emoji where the users array
+  // contains the calling user's id.
   const existingReaction = await Message.exists({
     _id: messageId,
     reactions: {
@@ -742,7 +757,6 @@ const toggleChannelMessageReaction = async ({
       { arrayFilters: [{ "elem.emoji": emoji }] },
     );
 
-    // Clean up the emoji subdocument if it now has zero reactors
     await Message.updateOne(
       { _id: messageId },
       { $pull: { reactions: { emoji, users: { $size: 0 } } } },
@@ -788,7 +802,7 @@ const toggleChannelMessageReaction = async ({
     };
   }
 
-  // Fetch the top 5 most-recent reactors' names for the preview
+  // Fetch the top 5 most-recent reactors' names for the preview.
   // Since embedded users have no timestamp, we take the last 5 entries
   // (most recently pushed) and reverse for display order.
   const previewUserIds = [...reactionEntry.users].reverse().slice(0, 5);
@@ -812,20 +826,20 @@ const toggleChannelMessageReaction = async ({
   };
 };
 
-const editChannelMessage = async ({
-  channelId,
+const editConversationMessage = async ({
+  conversationId,
   messageId,
   userId,
   content,
   fileIds,
   mentionedUserIds,
 }) => {
-  // Step 1: Fetch the message + channel and team archive state
-  // Need current attachments and mentions to compute the diff —
-  // what to remove vs what to add vs what to keep.
+  // Step 1: Fetch the target message
+  // Must exist in this conversation and not be soft-deleted.
+  // Also fetch current attachments and mentions to compute the diff.
   const message = await Message.findOne({
     _id: messageId,
-    channelId,
+    conversationId,
     deletedAt: null,
   })
     .select("senderId attachments")
@@ -842,42 +856,8 @@ const editChannelMessage = async ({
     );
   }
 
-  const channel = await Channel.findOne({
-    _id: channelId,
-    isDeleted: false,
-  })
-    .select("isArchived teamId")
-    .lean();
-
-  if (!channel) {
-    throw new ErrorHandler(
-      "Channel not found.",
-      EXCEPTION_CODES.RESOURCE_NOT_FOUND,
-    );
-  }
-
-  if (channel.isArchived) {
-    throw new ErrorHandler(
-      "Cannot edit a message in an archived channel.",
-      EXCEPTION_CODES.RESOURCE_CONFLICT,
-    );
-  }
-
-  const team = await Team.findOne({
-    _id: channel.teamId,
-    isDeleted: { $ne: true },
-  })
-    .select("isArchived")
-    .lean();
-
-  if (team?.isArchived) {
-    throw new ErrorHandler(
-      "Cannot edit a message in an archived team channel.",
-      EXCEPTION_CODES.RESOURCE_CONFLICT,
-    );
-  }
-
   // Step 2: Ownership check — only the original sender may edit
+  // Privacy-preserving 404 so callers can't probe other senders' messages.
   if (!message.senderId.equals(userId)) {
     throw new ErrorHandler(
       "Message not found.",
@@ -937,6 +917,8 @@ const editChannelMessage = async ({
     ...newFiles.map((file) => file.type),
   ];
 
+  const messageType = deriveMessageType(content, finalFileTypes);
+
   // Step 6: Validate mentioned users
   // All mentioned user IDs must exist and not be deleted.
   const uniqueMentionedUserIds = [
@@ -977,7 +959,7 @@ const editChannelMessage = async ({
   // Step 8: Persist all changes atomically
   // All writes happen in a single transaction:
   //   a) Soft-delete removed File docs
-  //   b) Mark new files as attached + scope them to this channel
+  //   b) Mark new files as attached + scope them to this conversation
   //   c) $set message.attachments to the full desired ordered array
   //   d) $set message.mentions to the full desired set
   //   e) Mark message as edited
@@ -996,7 +978,7 @@ const editChannelMessage = async ({
         );
       }
 
-      // 8b — Mark new files as attached and scope them to this channel
+      // 8b — Mark new files as attached and scope them to this conversation
       if (fileIdsToAdd.length > 0) {
         await File.updateMany(
           { _id: { $in: fileIdsToAdd } },
@@ -1004,8 +986,8 @@ const editChannelMessage = async ({
             $set: {
               status: FILE_STATUSES.ATTACHED,
               expiresAt: null,
-              channelId,
-              conversationId: null,
+              conversationId,
+              channelId: null,
             },
           },
           { session },
@@ -1024,6 +1006,7 @@ const editChannelMessage = async ({
             mentions: uniqueMentionedUserIds,
             isEdited: true,
             editedAt: new Date(),
+            messageType,
           },
         },
         { session },
@@ -1053,15 +1036,14 @@ const editChannelMessage = async ({
   // Step 9: Return the updated message shaped as MessageDto
   return await getMessageById(messageId, userId);
 };
-
 //#endregion
 
-export const channelMessageService = {
-  getChannelMessages,
-  sendChannelMessage,
-  forceDeleteChannelMessage,
-  deleteOwnMessage,
-  pinChannelMessage,
-  toggleChannelMessageReaction,
-  editChannelMessage,
+export const conversationMessageService = {
+  getConversationMessages,
+  sendConversationMessage,
+  forceDeleteConversationMessage,
+  deleteOwnConversationMessage,
+  pinConversationMessage,
+  toggleConversationMessageReaction,
+  editConversationMessage,
 };

@@ -122,6 +122,7 @@ const getTeams = async ({
       isPrivate: team.isPrivate,
       isArchived: team.isArchived,
       archivedAt: team.archivedAt ?? null,
+      archivedBy: team.archivedBy ?? null,
       createdAt: team.createdAt,
       memberCount: memberCountMap.get(team._id.toString()) ?? 0,
       role: membership?.role ?? null,
@@ -201,6 +202,7 @@ const getTeam = async ({ orgId, teamId, userId }) => {
     isPrivate: team.isPrivate,
     isArchived: team.isArchived,
     archivedAt: team.archivedAt ?? null,
+    archivedBy: team.archivedBy ?? null,
     createdAt: team.createdAt,
     memberCount,
   };

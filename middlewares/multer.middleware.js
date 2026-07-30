@@ -1,6 +1,14 @@
 import multer from "multer";
 import { ErrorHandler } from "../utils/errorHandler.util.js";
 import { EXCEPTION_CODES } from "../constants/exceptionCodes.constants.js";
+import {
+  ARCHIVE_MIME_TYPES,
+  AUDIO_MIME_TYPES,
+  CODE_MIME_TYPES,
+  DOCUMENT_MIME_TYPES,
+  IMAGE_MIME_TYPES,
+  VIDEO_MIME_TYPES,
+} from "#constants/fileTypes.constants.js";
 
 const ICON_MIME_TYPES = new Set([
   "image/png",
@@ -10,46 +18,12 @@ const ICON_MIME_TYPES = new Set([
 ]);
 
 const ATTACHMENT_MIME_TYPES = new Set([
-  // Images
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "image/svg+xml",
-  "image/avif",
-  // Video
-  "video/mp4",
-  "video/quicktime",
-  "video/webm",
-  // Audio
-  "audio/mpeg",
-  "audio/wav",
-  "audio/ogg",
-  "audio/mp4",
-  "audio/aac",
-  "audio/x-m4a",
-  // Documents
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  // Code / text
-  "text/plain",
-  "text/javascript",
-  "application/javascript",
-  "text/typescript",
-  "text/x-python",
-  "text/html",
-  "text/css",
-  "application/json",
-  // Archives
-  "application/zip",
-  "application/x-rar-compressed",
-  "application/gzip",
-  "application/x-7z-compressed",
+  ...CODE_MIME_TYPES,
+  ...ARCHIVE_MIME_TYPES,
+  ...DOCUMENT_MIME_TYPES,
+  ...AUDIO_MIME_TYPES,
+  ...VIDEO_MIME_TYPES,
+  ...IMAGE_MIME_TYPES,
 ]);
 
 const MB = 1024 * 1024;
@@ -122,7 +96,8 @@ const createUploadMiddleware = ({
       return next(new Error("Invalid upload mode"));
     }
 
-    // passed our own custom next() like: middleware(req,res,customNext())
+    // passed our own custom next() to get a custom field(uploadType) in global errorHandler
+    // eg: middleware(req,res,customNext())
     middleware(req, res, (err) => {
       if (err) {
         err.uploadType = type; // attach context
@@ -143,9 +118,8 @@ const iconUploadMiddleware = createUploadMiddleware({
 const attachmentUploadMiddleware = createUploadMiddleware({
   upload: attachmentUpload,
   type: UPLOAD_TYPES.ATTACHMENT,
-  mode: "array",
-  field: "files",
-  // maxCount: 10,
+  mode: "single",
+  field: "file",
 });
 
 export { iconUploadMiddleware, attachmentUploadMiddleware, UPLOAD_RULES };

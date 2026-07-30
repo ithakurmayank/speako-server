@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { pageSize } from "./common.validators.js";
 
-const getChannelMessagesSchema = z.object({
+const getMessagesCommonSchema = z.object({
   query: z.object({
     pageSize: pageSize(50),
 
@@ -11,7 +11,7 @@ const getChannelMessagesSchema = z.object({
   }),
 });
 
-const sendChannelMessageSchema = z.object({
+const sendMessageCommonSchema = z.object({
   body: z
     .object({
       clientMessageId: z
@@ -41,7 +41,7 @@ const sendChannelMessageSchema = z.object({
     ),
 });
 
-const toggleChannelMessageReactionSchema = z.object({
+const toggleMessageReactionCommonSchema = z.object({
   body: z.object({
     emoji: z
       .string({ required_error: "Emoji is required." })
@@ -51,7 +51,7 @@ const toggleChannelMessageReactionSchema = z.object({
   }),
 });
 
-const editChannelMessageSchema = z.object({
+const editMessageCommonSchema = z.object({
   body: z
     .object({
       content: z
@@ -75,8 +75,8 @@ const editChannelMessageSchema = z.object({
 });
 
 export {
-  getChannelMessagesSchema,
-  sendChannelMessageSchema,
-  toggleChannelMessageReactionSchema,
-  editChannelMessageSchema,
+  getMessagesCommonSchema,
+  sendMessageCommonSchema,
+  toggleMessageReactionCommonSchema,
+  editMessageCommonSchema,
 };

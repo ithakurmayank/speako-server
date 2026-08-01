@@ -12,8 +12,8 @@ import {
   NOTIFICATION_TEMPLATE_NAMES,
   NotificationTemplate,
   TEMPLATE_TYPES,
-} from "./models/notificationTemplate.model.js";
-import env from "./configs/env.config.js";
+} from "../models/notificationTemplate.model.js";
+import env from "../configs/env.config.js";
 
 // ─── Template definitions ────────────────────────────────────────────────────
 

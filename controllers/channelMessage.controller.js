@@ -22,13 +22,8 @@ const getChannelMessages = TryCatch(async (req, res) => {
 //#region UPDATE controllers
 const sendChannelMessage = TryCatch(async (req, res) => {
   const { orgId, teamId, channelId } = req.context;
-  const {
-    clientMessageId,
-    content,
-    fileIds,
-    mentionedUserIds,
-    threadRootMessageId,
-  } = req.body;
+  const { threadId } = req.params;
+  const { clientMessageId, content, fileIds, mentionedUserIds } = req.body;
 
   const result = await channelMessageService.sendChannelMessage({
     orgId,
@@ -39,19 +34,17 @@ const sendChannelMessage = TryCatch(async (req, res) => {
     content,
     fileIds: fileIds ?? [],
     mentionedUserIds: mentionedUserIds ?? [],
-    threadRootMessageId: threadRootMessageId ?? null,
+    threadRootMessageId: threadId ?? null,
   });
 
   return sendResponse(res, 200, null, "Message sent successfully.", result);
 });
 
 const forceDeleteChannelMessage = TryCatch(async (req, res) => {
-  const { orgId, teamId, channelId } = req.context;
+  const { channelId } = req.context;
   const { messageId } = req.params;
 
   await channelMessageService.forceDeleteChannelMessage({
-    orgId,
-    teamId,
     channelId,
     messageId,
     userId: req.userId,
@@ -118,6 +111,26 @@ const editChannelMessage = TryCatch(async (req, res) => {
   return sendResponse(res, 200, null, "Message edited successfully.", result);
 });
 
+const uploadChannelAttachment = TryCatch(async (req, res) => {
+  const { orgId, teamId, channelId } = req.context;
+
+  const result = await channelMessageService.uploadChannelAttachment({
+    orgId,
+    teamId,
+    channelId,
+    userId: req.userId,
+    file: req.file,
+  });
+
+  return sendResponse(
+    res,
+    200,
+    null,
+    "Attachment uploaded successfully.",
+    result,
+  );
+});
+
 //#endregion
 
 export {
@@ -128,4 +141,5 @@ export {
   pinChannelMessage,
   toggleChannelMessageReaction,
   editChannelMessage,
+  uploadChannelAttachment,
 };

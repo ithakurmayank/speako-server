@@ -7,9 +7,11 @@ import {
   pinChannelMessage,
   sendChannelMessage,
   toggleChannelMessageReaction,
+  uploadChannelAttachment,
 } from "#controllers/channelMessage.controller.js";
 import { authenticate } from "#middlewares/authenticate.middleware.js";
 import { authorize } from "#middlewares/authorize.middleware.js";
+import { attachmentUploadMiddleware } from "#middlewares/multer.middleware.js";
 import { validate } from "#middlewares/validator.middleware.js";
 import {
   editMessageCommonSchema,
@@ -35,6 +37,12 @@ router.get(
 router.post(
   "/",
   authorize(PERMISSIONS.MESSAGE_SEND),
+  validate(sendMessageCommonSchema),
+  sendChannelMessage,
+);
+
+router.post(
+  "/:threadId/replies",
   authorize(PERMISSIONS.MESSAGE_THREAD_REPLY),
   validate(sendMessageCommonSchema),
   sendChannelMessage,
@@ -77,6 +85,15 @@ router.put(
   validate(editMessageCommonSchema),
   editChannelMessage,
 );
+
+router.post(
+  "/attachments",
+  authorize(PERMISSIONS.MESSAGE_SEND),
+  authorize(PERMISSIONS.MESSAGE_THREAD_REPLY),
+  attachmentUploadMiddleware,
+  uploadChannelAttachment,
+);
+
 //#endregion
 
 export default router;

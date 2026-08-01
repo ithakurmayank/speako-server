@@ -7,6 +7,7 @@ import {
   pinConversationMessage,
   sendConversationMessage,
   toggleConversationMessageReaction,
+  uploadConversationAttachment,
 } from "#controllers/conversationMessage.controller.js";
 import { authorize } from "#middlewares/authorize.middleware.js";
 import { validate } from "#middlewares/validator.middleware.js";
@@ -34,6 +35,12 @@ router.get(
 router.post(
   "/",
   authorize(PERMISSIONS.MESSAGE_SEND),
+  validate(sendMessageCommonSchema),
+  sendConversationMessage,
+);
+
+router.post(
+  "/:threadId/replies",
   authorize(PERMISSIONS.MESSAGE_THREAD_REPLY),
   validate(sendMessageCommonSchema),
   sendConversationMessage,
@@ -70,6 +77,15 @@ router.put(
   validate(editMessageCommonSchema),
   editConversationMessage,
 );
+
+router.post(
+  "/attachments",
+  authorize(PERMISSIONS.MESSAGE_SEND),
+  authorize(PERMISSIONS.MESSAGE_THREAD_REPLY),
+  attachmentUploadMiddleware,
+  uploadConversationAttachment,
+);
+
 //#endregion
 
 export default router;

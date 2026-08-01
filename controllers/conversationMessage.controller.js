@@ -19,13 +19,8 @@ const getConversationMessages = TryCatch(async (req, res) => {
 //#region UPDATE controllers
 const sendConversationMessage = TryCatch(async (req, res) => {
   const { conversationId } = req.context;
-  const {
-    clientMessageId,
-    content,
-    fileIds,
-    mentionedUserIds,
-    threadRootMessageId,
-  } = req.body;
+  const { threadId } = req.params;
+  const { clientMessageId, content, fileIds, mentionedUserIds } = req.body;
 
   const result = await conversationMessageService.sendConversationMessage({
     conversationId,
@@ -34,7 +29,7 @@ const sendConversationMessage = TryCatch(async (req, res) => {
     content,
     fileIds,
     mentionedUserIds,
-    threadRootMessageId,
+    threadRootMessageId: threadId ?? null,
   });
 
   return sendResponse(res, 201, null, "Message sent successfully.", result);
@@ -111,6 +106,24 @@ const editConversationMessage = TryCatch(async (req, res) => {
 
   return sendResponse(res, 200, null, "Message edited successfully.", result);
 });
+
+const uploadConversationAttachment = TryCatch(async (req, res) => {
+  const { conversationId } = req.context;
+
+  const result = await conversationMessageService.uploadConversationAttachment({
+    conversationId,
+    userId: req.userId,
+    file: req.file,
+  });
+
+  return sendResponse(
+    res,
+    200,
+    null,
+    "Attachment uploaded successfully.",
+    result,
+  );
+});
 //#endregion
 
 export {
@@ -121,4 +134,5 @@ export {
   pinConversationMessage,
   sendConversationMessage,
   toggleConversationMessageReaction,
+  uploadConversationAttachment,
 };

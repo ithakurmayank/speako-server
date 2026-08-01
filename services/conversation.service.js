@@ -5,6 +5,7 @@ import {
 } from "#constants/conversation.constants.js";
 import { EXCEPTION_CODES } from "#constants/exceptionCodes.constants.js";
 import { CLOUDINARY_RESOURCE_TYPES } from "#constants/fileTypes.constants.js";
+import { MESSAGE_TYPES } from "#constants/message.constants.js";
 import { NOTIFICATION_TYPES } from "#constants/notifications.constants.js";
 import { GROUP_ROLES } from "#constants/roles.constants.js";
 import { deleteCloudinaryFile, uploadIcon } from "#lib/cloudinary.lib.js";
@@ -734,7 +735,7 @@ const updateGroupConversationLogo = async ({
           {
             conversationId,
             senderId: userId,
-            isSystem: true,
+            messageType: MESSAGE_TYPES.SYSTEM,
             content: "Group icon has been changed.",
           },
         ],
@@ -805,7 +806,7 @@ const updateGroupConversation = async ({ conversationId, userId, name }) => {
           {
             conversationId,
             senderId: userId,
-            isSystem: true,
+            messageType: MESSAGE_TYPES.SYSTEM,
             content: `Group has been renamed from ${conversation.name} to ${incomingName}.`,
           },
         ],
@@ -857,7 +858,7 @@ const removeGroupConversationLogo = async ({ conversationId, userId }) => {
           {
             conversationId,
             senderId: userId,
-            isSystem: true,
+            messageType: MESSAGE_TYPES.SYSTEM,
             content: "Group logo has been removed.",
           },
         ],
@@ -1050,7 +1051,7 @@ const addParticipant = async ({ conversationId, userId, targetUserId }) => {
           {
             conversationId,
             senderId: userId,
-            isSystem: true,
+            messageType: MESSAGE_TYPES.SYSTEM,
             content: `${targetUser.name} ${action} the Group.`,
           },
         ],
@@ -1158,7 +1159,7 @@ const leaveConversation = async ({ conversationId, userId }) => {
           {
             conversationId,
             senderId: userId,
-            isSystem: true,
+            messageType: MESSAGE_TYPES.SYSTEM,
             content: `${user?.name ?? "A participant"} left the Group.`,
           },
         ],
@@ -1221,7 +1222,7 @@ const removeParticipant = async ({ conversationId, participantId, userId }) => {
           {
             conversationId,
             senderId: userId,
-            isSystem: true,
+            messageType: MESSAGE_TYPES.SYSTEM,
             content: `${removedUser?.name ?? "Someone"} removed from the Group.`,
           },
         ],

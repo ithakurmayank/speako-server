@@ -1,4 +1,5 @@
 import { EXCEPTION_CODES } from "#constants/exceptionCodes.constants.js";
+import { MESSAGE_TYPES } from "#constants/message.constants.js";
 import { NOTIFICATION_TYPES } from "#constants/notifications.constants.js";
 import { ORG_ROLES } from "#constants/roles.constants.js";
 import { MEMBER_SCOPES } from "#constants/user.constants.js";
@@ -657,7 +658,7 @@ const updateChannel = async ({
     await Message.create({
       channelId,
       senderId: userId,
-      isSystem: true,
+      messageType: MESSAGE_TYPES.SYSTEM,
       content: `Channel has been renamed from ${channel.name} to ${incomingName}.`,
     });
   }
@@ -726,7 +727,7 @@ const archiveChannel = async ({ orgId, teamId, channelId, userId }) => {
           {
             channelId,
             senderId: userId,
-            isSystem: true,
+            messageType: MESSAGE_TYPES.SYSTEM,
             content: "Channel has been archived.",
           },
         ],
@@ -792,7 +793,7 @@ const unarchiveChannel = async ({ orgId, teamId, channelId, userId }) => {
           {
             channelId,
             senderId: userId,
-            isSystem: true,
+            messageType: MESSAGE_TYPES.SYSTEM,
             content: "Channel has been un-archived.",
           },
         ],

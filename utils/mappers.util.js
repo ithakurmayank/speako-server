@@ -12,14 +12,13 @@ const toMessageDTO = ({ message, sender = null, reactions = [] }) => {
 
     content: message.content ?? null,
 
-    isSystem: message.isSystem,
+    messageType: message.messageType,
     isEdited: message.isEdited,
     editedAt: message.editedAt ?? null,
 
     replyCount: message.replyCount,
     lastReplyAt: message.lastReplyAt ?? null,
 
-    dmStatus: message.dmStatus ?? null,
     dmDeliveredAt: message.dmDeliveredAt ?? null,
     dmSeenAt: message.dmSeenAt ?? null,
 

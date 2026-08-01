@@ -27,6 +27,7 @@ import {
   updateParticipantRoleSchema,
 } from "#validators/conversation.validators.js";
 import { Router } from "express";
+import conversationMessageRoute from "./conversationMessage.routes.js";
 
 const router = Router({ mergeParams: true });
 router.use(authenticate);
@@ -107,5 +108,8 @@ router.delete(
 );
 
 //#endregion
+
+//ConversationMessage Routes
+router.use("/:conversationId/messages", conversationMessageRoute);
 
 export default router;

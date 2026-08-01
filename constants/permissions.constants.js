@@ -9,6 +9,11 @@ const PERMISSIONS = Object.freeze({
   ORG_MEMBERS_ROLE_CHANGE: "org:members:role:change",
   ORG_TEAMS_CREATE: "org:teams:create",
   ORG_TEAMS_DELETE: "org:teams:delete",
+  // ORG_OWNERSHIP_TRANSFER is intentionally not assigned to any explicit role.
+  // Only OrgOwner receives this permission via the wildcard ("*").
+  // This prevents accidental delegation of ownership transfer to OrgAdmin or
+  // other future roles by adding the permission explicitly.
+  ORG_OWNERSHIP_TRANSFER: "org:ownership:transfer",
 
   // ── Team-level ─────────────────────────────────────
   TEAM_SETTINGS_EDIT: "team:settings:edit",

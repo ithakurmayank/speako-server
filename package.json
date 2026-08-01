@@ -22,7 +22,9 @@
   },
   "scripts": {
     "dev": "cross-env NODE_ENV=development nodemon app.js",
-    "start": "node app.js"
+    "start": "node app.js",
+    "generate:schema": "node scripts/generateLatestSchema.js",
+    "seed:templates:": "node scripts/seedNotificationTemplates.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

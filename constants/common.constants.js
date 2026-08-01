@@ -12,6 +12,9 @@ const OTP_PURPOSES = Object.freeze({
 });
 const OTP_PURPOSES_VALUES = Object.values(OTP_PURPOSES);
 
+//Files
+const FILE_TTL_EXPIRY_SECONDS = 24 * 60 * 60;
+
 // Outbox Messages
 const OUTBOX_CONFIG = {
   MAX_RETRIES: 5,
@@ -33,4 +36,5 @@ export {
   OUTBOX_CONFIG,
   OTP_MAX_FAILED_ATTEMPTS,
   OUTBOX_MESSAGE_TYPES,
+  FILE_TTL_EXPIRY_SECONDS,
 };

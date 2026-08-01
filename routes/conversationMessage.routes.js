@@ -1,17 +1,15 @@
 import { PERMISSIONS } from "#constants/permissions.constants.js";
 import {
-  deleteOwnMessage,
-  editChannelMessage,
-  forceDeleteChannelMessage,
-  getChannelMessages,
-  pinChannelMessage,
-  sendChannelMessage,
-  toggleChannelMessageReaction,
-  uploadChannelAttachment,
-} from "#controllers/channelMessage.controller.js";
-import { authenticate } from "#middlewares/authenticate.middleware.js";
+  deleteOwnConversationMessage,
+  editConversationMessage,
+  forceDeleteConversationMessage,
+  getConversationMessages,
+  pinConversationMessage,
+  sendConversationMessage,
+  toggleConversationMessageReaction,
+  uploadConversationAttachment,
+} from "#controllers/conversationMessage.controller.js";
 import { authorize } from "#middlewares/authorize.middleware.js";
-import { attachmentUploadMiddleware } from "#middlewares/multer.middleware.js";
 import { validate } from "#middlewares/validator.middleware.js";
 import {
   editMessageCommonSchema,
@@ -28,7 +26,7 @@ router.get(
   "/",
   authorize(null),
   validate(getMessagesCommonSchema),
-  getChannelMessages,
+  getConversationMessages,
 );
 
 //#endregion
@@ -38,52 +36,46 @@ router.post(
   "/",
   authorize(PERMISSIONS.MESSAGE_SEND),
   validate(sendMessageCommonSchema),
-  sendChannelMessage,
+  sendConversationMessage,
 );
 
 router.post(
   "/:threadId/replies",
   authorize(PERMISSIONS.MESSAGE_THREAD_REPLY),
   validate(sendMessageCommonSchema),
-  sendChannelMessage,
+  sendConversationMessage,
 );
 
 router.delete(
-  "/messageId/force",
+  "/:messageId/force",
   authorize(PERMISSIONS.MESSAGE_DELETE_ANY),
-  forceDeleteChannelMessage,
+  forceDeleteConversationMessage,
 );
 
 router.delete(
-  "/messageId",
+  "/:messageId",
   authorize(PERMISSIONS.MESSAGE_DELETE_OWN),
-  deleteOwnMessage,
+  deleteOwnConversationMessage,
 );
 
 router.post(
-  "/messageId/pin",
+  "/:messageId/pin",
   authorize(PERMISSIONS.MESSAGE_PIN),
-  pinChannelMessage,
+  pinConversationMessage,
 );
 
 router.post(
-  "/messageId/pin",
-  authorize(PERMISSIONS.MESSAGE_PIN),
-  pinChannelMessage,
-);
-
-router.post(
-  "/messageId/reactions",
+  "/:messageId/reactions",
   authorize(PERMISSIONS.MESSAGE_REACT),
   validate(toggleMessageReactionCommonSchema),
-  toggleChannelMessageReaction,
+  toggleConversationMessageReaction,
 );
 
 router.put(
-  "/messageId",
+  "/:messageId",
   authorize(PERMISSIONS.MESSAGE_EDIT_OWN),
   validate(editMessageCommonSchema),
-  editChannelMessage,
+  editConversationMessage,
 );
 
 router.post(
@@ -91,7 +83,7 @@ router.post(
   authorize(PERMISSIONS.MESSAGE_SEND),
   authorize(PERMISSIONS.MESSAGE_THREAD_REPLY),
   attachmentUploadMiddleware,
-  uploadChannelAttachment,
+  uploadConversationAttachment,
 );
 
 //#endregion

@@ -107,14 +107,13 @@ router.put(
   transferOrganizationOwnership,
 );
 
-router.put("/:orgId/leave", leaveOrganization);
+router.put("/:orgId/members/me", leaveOrganization);
 
 router.delete(
   "/:orgId/members/:membershipId",
   authorize(PERMISSIONS.ORG_MEMBERS_REMOVE),
   removeOrganizationMember,
 );
-router.put("/:orgId/leave", leaveOrganization);
 
 router.delete(
   "/:orgId/icon",

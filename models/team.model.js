@@ -18,6 +18,7 @@ const teamSchema = new Schema(
     isPrivate: { type: Boolean, default: false },
     isArchived: { type: Boolean, default: false },
     archivedAt: { type: Date, default: null },
+    archivedBy: { type: ObjectId, ref: "User", default: null },
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
     deletedBy: { type: ObjectId, ref: "User", default: null },
@@ -27,5 +28,32 @@ const teamSchema = new Schema(
 
 teamSchema.index({ orgId: 1 });
 teamSchema.index({ orgId: 1, isArchived: 1 });
+teamSchema.index(
+  { orgId: 1, name: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      isDeleted: false,
+    },
+  },
+);
+
+teamSchema.pre("validate", function (next) {
+  if (!this.isArchived) {
+    if (this.archivedAt !== null || this.archivedBy !== null) {
+      return next(
+        new Error(
+          "archivedAt and archivedBy must be null when isArchived is false",
+        ),
+      );
+    }
+  } else {
+    if (!this.archivedAt) {
+      return next(new Error("archivedAt is required when isArchived is true"));
+    }
+  }
+
+  next();
+});
 
 export const Team = mongoose.models.Team || model("Team", teamSchema);

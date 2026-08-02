@@ -1,5 +1,8 @@
 import mongoose, { model, Schema, Types } from "mongoose";
-import { NOTIFICATION_TYPE_VALUES } from "../constants/notifications.constants.js";
+import {
+  NOTIFICATION_EXPIRY_SECONDS,
+  NOTIFICATION_TYPE_VALUES,
+} from "../constants/notifications.constants.js";
 
 const { ObjectId } = Types;
 
@@ -37,7 +40,7 @@ notificationSchema.index({ recipientId: 1, createdAt: -1 }); // full history
 notificationSchema.index(
   { readAt: 1 },
   {
-    expireAfterSeconds: 30 * 24 * 60 * 60,
+    expireAfterSeconds: NOTIFICATION_EXPIRY_SECONDS,
     partialFilterExpression: { isRead: true },
     name: "ttl_read_notifications",
   },

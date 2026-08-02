@@ -2,16 +2,7 @@ import { teamService } from "#services/team.service.js";
 import { TryCatch } from "#utils/errorHandler.util.js";
 import { sendResponse } from "#utils/sendResponse.util.js";
 
-/**
- * @typedef {import("#types/express.js").Request} Request
- * @typedef {import("#types/express.js").Response} Response
- */
-
 //#region GET controllers
-/**
- * @param {Request} req
- * @param {Response} res
- */
 const getTeams = TryCatch(async (req, res) => {
   const { orgId } = req.context;
   const { search, isArchived, includePrivate, pageSize, pageNumber } =

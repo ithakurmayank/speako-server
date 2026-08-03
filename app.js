@@ -1,6 +1,5 @@
 import express from "express";
 import { createServer } from "http";
-import { Server } from "socket.io";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
@@ -12,22 +11,17 @@ import { globalErrorMiddleware } from "./middlewares/error.middleware.js";
 import { ErrorHandler } from "./utils/errorHandler.util.js";
 import { EXCEPTION_CODES } from "#constants/exceptionCodes.constants.js";
 import { startEmailWorker } from "./workers/email.worker.js";
+import { initSocket } from "configs/socket.config.js";
 
 validateEnv();
 
 const app = express();
 const server = createServer(app);
 
-// const io = new Server(server, {
-//   cors: {
-//     origin: env.CORS_ORIGINS.split(","),
-//     credentials: true,
-//   },
-// });
+initSocket(server);
 
 // Middlewares
 app.use(cors(corsOptions));
-// app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
@@ -39,7 +33,7 @@ app.use((req, res) => {
   throw new ErrorHandler("Route not found", EXCEPTION_CODES.ROUTE_NOT_FOUND);
 });
 
-// Error handler
+// Error handler Middleware
 app.use(globalErrorMiddleware);
 
 // Start server
